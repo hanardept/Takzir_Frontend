@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מערכת ניהול תקלות צבאית</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="landing-page">
+        <div class="landing-container">
+            <div class="landing-content">
+                <h1>מערכת ניהול תקלות צבאית</h1>
+                <p class="landing-subtitle">
+                    מערכת מתקדמת לניהול ומעקב אחר תקלות ציוד צבאי
+                </p>
+                
+                <div class="landing-features">
+                    <div class="feature">
+                        <h3>ניהול תקלות מתקדם</h3>
+                        <p>מעקב מלא אחר כל התקלות עם סטטוסים וקטגוריות</p>
+                    </div>
+                    <div class="feature">
+                        <h3>ממשק עברי נגיש</h3>
+                        <p>ממשק ידידותי המותאם לעבודה בעברית עם תמיכה מלאה ב-RTL</p>
+                    </div>
+                    <div class="feature">
+                        <h3>ניהול הרשאות</h3>
+                        <p>מערכת הרשאות מתקדמת עם תפקידים שונים</p>
+                    </div>
+                    <div class="feature">
+                        <h3>דוחות וייצוא</h3>
+                        <p>יצירת דוחות ויכולת ייצוא נתונים לאקסל</p>
+                    </div>
+                </div>
+                
+                <div class="landing-actions">
+                    <button class="btn btn-primary btn-large" onclick="window.location.href='/login'">
+                        התחברות למערכת
+                    </button>
+                    <button class="btn btn-secondary btn-large" onclick="window.location.href='/dashboard'">
+                        לוח הבקרה
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="landing-footer">
+            <p>&copy; 2025 מערכת ניהול תקלות צבאית - כל הזכויות שמורות</p>
+        </div>
+    </div>
+
+    <script src="/js/app.js"></script>
+    <script>
+        // Check if user is already logged in
+        checkAuthentication().then(() => {
+            if (currentUser) {
+                // Add quick navigation for logged in users
+                const actionsDiv = document.querySelector('.landing-actions');
+                actionsDiv.innerHTML = `
+                    <p class="welcome-message">שלום ${currentUser.username}!</p>
+                    <button class="btn btn-primary btn-large" onclick="window.location.href='/dashboard'">
+                        לוח הבקרה
+                    </button>
+                    <button class="btn btn-success btn-large" onclick="window.location.href='/tickets'">
+                        ניהול תקלות
+                    </button>
+                    ${currentUser.role === 'admin' ? `
+                        <button class="btn btn-warning btn-large" onclick="window.location.href='/users'">
+                            ניהול משתמשים
+                        </button>
+                    ` : ''}
+                `;
+            }
+        }).catch(() => {
+            // Not logged in, show default buttons
+        });
+    </script>
+
+    <style>
+        .landing-page {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .landing-container {
+            max-width: 1000px;
+            width: 100%;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+            animation: slideUp 0.8s ease-out;
+        }
+        
+        .landing-content {
+            padding: 60px 40px;
+            text-align: center;
+        }
+        
+        .landing-content h1 {
+            font-size: 3rem;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 20px;
+            background: linear-gradient(90deg, #1e3c72 0%, #2a5298 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .landing-subtitle {
+            font-size: 1.3rem;
+            color: #666;
+            margin-bottom: 40px;
+            line-height: 1.6;
+        }
+        
+        .landing-features {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            margin: 40px 0;
+        }
+        
+        .feature {
+            background: #f8f9fa;
+            padding: 25px;
+            border-radius: 12px;
+            border: 1px solid #e9ecef;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .feature:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+        }
+        
+        .feature h3 {
+            font-size: 1.3rem;
+            color: #1e3c72;
+            margin-bottom: 12px;
+            font-weight: 600;
+        }
+        
+        .feature p {
+            color: #666;
+            line-height: 1.5;
+        }
+        
+        .landing-actions {
+            margin-top: 40px;
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        
+        .btn-large {
+            padding: 15px 30px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            min-width: 180px;
+        }
+        
+        .welcome-message {
+            font-size: 1.2rem;
+            color: #1e3c72;
+            font-weight: 600;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+        
+        .landing-footer {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+        
+        @media (max-width: 768px) {
+            .landing-content {
+                padding: 40px 20px;
+            }
+            
+            .landing-content h1 {
+                font-size: 2.2rem;
+            }
+            
+            .landing-subtitle {
+                font-size: 1.1rem;
+            }
+            
+            .landing-features {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .landing-actions {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .btn-large {
+                width: 100%;
+                max-width: 300px;
+            }
+        }
+    </style>
+</body>
+</html>

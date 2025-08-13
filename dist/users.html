@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ניהול משתמשים - מערכת ניהול תקלות צבאית</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>ניהול משתמשים</h1>
+            <p class="subtitle">ניהול משתמשים ותפקידים במערכת</p>
+        </div>
+        
+        <div class="user-info" id="user-info">
+            <!-- User info will be populated by JavaScript -->
+        </div>
+        
+        <nav class="nav">
+            <div class="nav-menu">
+                <a href="/dashboard" class="nav-item">לוח בקרה</a>
+                <a href="/tickets" class="nav-item">ניהול תקלות</a>
+                <a href="/users" class="nav-item active">ניהול משתמשים</a>
+                <a href="/import" class="nav-item admin-only" id="import-nav" style="display: none;">ייבוא נתונים</a>
+                
+            </div>
+        </nav>
+        
+        <!-- Action Buttons -->
+        <div class="users-actions-header">
+            <button class="btn btn-success" id="create-user-btn">
+                יצירת משתמש חדש
+            </button>
+            <button class="btn btn-info" onclick="refreshUsers()">
+                רענון רשימה
+            </button>
+            <button class="btn btn-warning" onclick="exportUsers()">
+                ייצוא לאקסל
+            </button>
+        </div>
+        
+        <!-- Users Table -->
+        <div class="card">
+            <div class="card-header">
+                <h3>רשימת משתמשים</h3>
+            </div>
+            <div class="card-body">
+                <div class="table-container">
+                    <table class="table" id="users-table">
+                        <thead>
+                            <tr>
+                                <th>שם משתמש</th>
+                                <th>תפקיד</th>
+                                <th>פיקוד</th>
+                                <th>יחידה</th>
+                                <th>כניסה אחרונה</th>
+                                <th>פעולות</th>
+                            </tr>
+                        </thead>
+                        <tbody id="users-table-body">
+                            <tr>
+                                <td colspan="6" class="text-center">
+                                    <div class="loading">
+                                        <div class="spinner"></div>
+                                        <p>טוען משתמשים...</p>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        
+        <!-- User Statistics -->
+        <div class="card">
+            <div class="card-header">
+                <h3>סטטיסטיקות משתמשים</h3>
+            </div>
+            <div class="card-body">
+                <div class="user-stats-grid" id="user-stats-grid">
+                    <!-- Stats will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/app.js"></script>
+    <script src="/js/utils.js"></script>
+    <script src="/js/users.js"></script>
+    
+    <script>
+        // Override loadUsers to include statistics
+        const originalLoadUsers = loadUsers;
+        loadUsers = async function() {
+            await originalLoadUsers();
+            updateUserStats();
+        };
+        
+        function updateUserStats() {
+            const stats = {
+                total: currentUsers.length,
+                admins: currentUsers.filter(u => u.role === 'admin').length,
+                technicians: currentUsers.filter(u => u.role === 'technician').length,
+                viewers: currentUsers.filter(u => u.role === 'viewer').length,
+                recentlyActive: currentUsers.filter(u => {
+                    if (!u.lastLogin) return false;
+                    const weekAgo = new Date();
+                    weekAgo.setDate(weekAgo.getDate() - 7);
+                    return new Date(u.lastLogin) > weekAgo;
+                }).length
+            };
+            
+            const statsGrid = document.getElementById('user-stats-grid');
+            statsGrid.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-number">${stats.total}</div>
+                    <div class="stat-label">סה"כ משתמשים</div>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);">
+                    <div class="stat-number">${stats.admins}</div>
+                    <div class="stat-label">מנהלים</div>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);">
+                    <div class="stat-number">${stats.technicians}</div>
+                    <div class="stat-label">טכנאים</div>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #6c757d 0%, #495057 100%);">
+                    <div class="stat-number">${stats.viewers}</div>
+                    <div class="stat-label">צופים</div>
+                </div>
+                <div class="stat-card" style="background: linear-gradient(135deg, #28a745 0%, #1e7e34 100%);">
+                    <div class="stat-number">${stats.recentlyActive}</div>
+                    <div class="stat-label">פעילים השבוע</div>
+                </div>
+            `;
+        }
+        
+        function refreshUsers() {
+            loadUsers();
+        }
+        
+        async function exportUsers() {
+            try {
+                showLoading('מכין קובץ Excel...');
+                
+                // Create Excel data
+                const data = currentUsers.map(user => ({
+                    'שם משתמש': user.username,
+                    'תפקיד': getRoleDisplayName(user.role),
+                    'פיקוד': user.command,
+                    'יחידה': user.unit,
+                    'כניסה אחרונה': user.lastLogin ? formatDate(user.lastLogin) : 'אף פעם',
+                    'תאריך יצירה': formatDate(user.createdAt)
+                }));
+                
+                // Simple CSV export (since we don't have backend endpoint for users export)
+                const csv = convertToCSV(data);
+                downloadCSV(csv, `users_${formatDateOnly(new Date())}.csv`);
+                
+                showSuccess('קובץ הורד בהצלחה');
+                
+            } catch (error) {
+                console.error('Export error:', error);
+                showError('שגיאה בייצוא הנתונים');
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        function convertToCSV(data) {
+            if (!data || !data.length) return '';
+            
+            const headers = Object.keys(data[0]);
+            const csvContent = [
+                headers.join(','),
+                ...data.map(row => headers.map(header => `"${row[header] || ''}"`).join(','))
+            ].join('\n');
+            
+            return csvContent;
+        }
+        
+        function downloadCSV(csv, filename) {
+            const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            link.setAttribute('href', url);
+            link.setAttribute('download', filename);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+    </script>
+    
+    <style>
+        .users-actions-header {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .user-stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+        }
+        
+        .user-actions {
+            display: flex;
+            gap: 5px;
+            flex-wrap: wrap;
+        }
+        
+        .user-actions .btn {
+            padding: 4px 8px;
+            font-size: 0.8rem;
+            min-width: auto;
+        }
+        
+        @media (max-width: 768px) {
+            .users-actions-header {
+                flex-direction: column;
+            }
+            
+            .user-stats-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</body>
+</html>

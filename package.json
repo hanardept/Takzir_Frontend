@@ -1,0 +1,22 @@
+{
+  "name": "Takzir-maintenance-frontend",
+  "version": "1.0.0",
+  "description": "Takzir Equipment Maintenance Ticket System - Frontend",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js",
+    "build": "npm run copy-assets",
+    "copy-assets": "node build-script.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "express-rate-limit": "^6.10.0",
+    "helmet": "^7.0.0",
+    "compression": "^1.7.4",
+    "serve-static": "^1.15.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1"
+  }
+}

@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ייבוא נתונים - מערכת ניהול תקלות צבאית</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>ייבוא נתונים</h1>
+            <p class="subtitle">ייבוא תקלות מקובץ Excel</p>
+        </div>
+        
+        <div class="user-info" id="user-info">
+            <!-- User info will be populated by JavaScript -->
+        </div>
+        
+        <nav class="nav">
+            <div class="nav-menu">
+                <a href="/dashboard" class="nav-item">לוח בקרה</a>
+                <a href="/tickets" class="nav-item">ניהול תקלות</a>
+                <a href="/users" class="nav-item">ניהול משתמשים</a>
+                <a href="/import" class="nav-item admin-only" id="import-nav" style="display: none;">ייבוא נתונים</a>
+            </div>
+        </nav>
+        
+        <!-- Import Instructions -->
+        <div class="card">
+            <div class="card-header">
+                <h3>הוראות ייבוא</h3>
+            </div>
+            <div class="card-body">
+                <div class="import-instructions">
+                    <p><strong>פורמט הקובץ הנדרש:</strong></p>
+                    <ul>
+                        <li>קובץ Excel (.xlsx או .xls)</li>
+                        <li>גודל מקסימלי: 10MB</li>
+                        <li>השורה הראשונה חייבת להכיל כותרות עמודות</li>
+                    </ul>
+                    
+                    <p><strong>עמודות נדרשות (בעברית או באנגלית):</strong></p>
+                    <div class="columns-grid">
+                        <div class="column-pair">
+                            <strong>עברית:</strong> מספר תקלה<br>
+                            <strong>English:</strong> Ticket Number
+                        </div>
+                        <div class="column-pair">
+                            <strong>עברית:</strong> פיקוד<br>
+                            <strong>English:</strong> Command
+                        </div>
+                        <div class="column-pair">
+                            <strong>עברית:</strong> יחידה<br>
+                            <strong>English:</strong> Unit
+                        </div>
+                        <div class="column-pair">
+                            <strong>עברית:</strong> עדיפות<br>
+                            <strong>English:</strong> Priority
+                        </div>
+                        <div class="column-pair">
+                            <strong>עברית:</strong> סטטוס<br>
+                            <strong>English:</strong> Status
+                        </div>
+                        <div class="column-pair">
+                            <strong>עברית:</strong> תיאור<br>
+                            <strong>English:</strong> Description
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- File Upload Area -->
+        <div class="card">
+            <div class="card-header">
+                <h3>העלאת קובץ Excel</h3>
+            </div>
+            <div class="card-body">
+                <div class="upload-area" id="upload-area">
+                    <div class="upload-zone" id="upload-zone">
+                        <div class="upload-icon">📁</div>
+                        <p class="upload-text">גרור קובץ Excel לכאן או לחץ לבחירה</p>
+                        <p class="upload-subtext">קבצי .xlsx, .xls עד 10MB</p>
+                        <input type="file" id="file-input" accept=".xlsx,.xls" style="display: none;">
+                        <button class="btn btn-primary" onclick="document.getElementById('file-input').click()">
+                            בחר קובץ
+                        </button>
+                    </div>
+                </div>
+                
+                <div class="file-info" id="file-info" style="display: none;">
+                    <div class="selected-file">
+                        <span class="file-name" id="file-name"></span>
+                        <span class="file-size" id="file-size"></span>
+                        <button class="btn btn-danger btn-sm" onclick="clearFile()">הסר</button>
+                    </div>
+                </div>
+                
+                <div class="import-actions" id="import-actions" style="display: none;">
+                    <button class="btn btn-success" id="import-btn" onclick="startImport()">
+                        התחל ייבוא
+                    </button>
+                    <button class="btn btn-secondary" onclick="clearFile()">
+                        ביטול
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Progress Area -->
+        <div class="card" id="progress-card" style="display: none;">
+            <div class="card-header">
+                <h3>מתקדם ייבוא</h3>
+            </div>
+            <div class="card-body">
+                <div class="progress-bar-container">
+                    <div class="progress-bar" id="progress-bar">
+                        <div class="progress-fill" id="progress-fill"></div>
+                    </div>
+                    <div class="progress-text" id="progress-text">0%</div>
+                </div>
+                
+                <div class="import-stats" id="import-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">סה"כ שורות:</span>
+                        <span class="stat-value" id="total-rows">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">מיובא בהצלחה:</span>
+                        <span class="stat-value" id="imported-count">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">שגיאות:</span>
+                        <span class="stat-value" id="error-count">0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Results Area -->
+        <div class="card" id="results-card" style="display: none;">
+            <div class="card-header">
+                <h3>תוצאות ייבוא</h3>
+            </div>
+            <div class="card-body">
+                <div class="results-summary" id="results-summary"></div>
+                <div class="error-details" id="error-details"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/js/app.js"></script>
+    <script src="/js/import.js"></script>
+    
+    <style>
+        .import-instructions ul {
+            margin: 10px 0;
+            padding-right: 20px;
+        }
+        
+        .columns-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        
+        .column-pair {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 0.9rem;
+        }
+        
+        .upload-area {
+            margin: 20px 0;
+        }
+        
+        .upload-zone {
+            border: 3px dashed #007bff;
+            border-radius: 10px;
+            padding: 40px 20px;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            background: #f8f9fa;
+        }
+        
+        .upload-zone:hover {
+            border-color: #0056b3;
+            background: #e3f2fd;
+        }
+        
+        .upload-zone.dragover {
+            border-color: #28a745;
+            background: #e8f5e8;
+        }
+        
+        .upload-icon {
+            font-size: 3rem;
+            margin-bottom: 15px;
+        }
+        
+        .upload-text {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        
+        .upload-subtext {
+            color: #6c757d;
+            margin-bottom: 20px;
+        }
+        
+        .file-info {
+            background: #e8f5e8;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        
+        .selected-file {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 15px;
+        }
+        
+        .file-name {
+            font-weight: 600;
+            flex-grow: 1;
+        }
+        
+        .file-size {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+        
+        .import-actions {
+            text-align: center;
+            margin-top: 20px;
+        }
+        
+        .progress-bar-container {
+            margin-bottom: 20px;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 25px;
+            background: #e9ecef;
+            border-radius: 12px;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #28a745, #20c997);
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+        
+        .progress-text {
+            text-align: center;
+            font-weight: 600;
+            margin-top: 10px;
+        }
+        
+        .import-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+        
+        .stat-item {
+            text-align: center;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .stat-label {
+            display: block;
+            font-size: 0.9rem;
+            color: #6c757d;
+            margin-bottom: 5px;
+        }
+        
+        .stat-value {
+            display: block;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #007bff;
+        }
+        
+        .results-summary {
+            background: #d4edda;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .error-details {
+            background: #f8d7da;
+            padding: 15px;
+            border-radius: 8px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .btn-sm {
+            padding: 5px 10px;
+            font-size: 0.85rem;
+        }
+    </style>
+</body>
+</html>
