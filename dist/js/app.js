@@ -1,7 +1,7 @@
 // Global app configuration and utilities
 const API_BASE_URL = 'https://takzir-backend-5915076344.europe-west4.run.app/api';
 const ENVIRONMENT = 'production';
-const BUILD_TIME = '2025-08-14T08:03:02.045Z';
+const BUILD_TIME = '2025-08-14T08:06:54.170Z';
 
 // Global state
 let currentUser = null;

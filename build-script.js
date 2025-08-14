@@ -148,7 +148,7 @@ async function processHtmlFiles() {
       `<head>
     <!-- Production Deployment -->
     <meta name="robots" content="noindex, nofollow">
-    <meta name="description" content="Military Equipment Maintenance Ticket System - IDF">
+    <meta name="description" content="Takzir Maintenance Ticket System - IDF">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/x-icon" href="/favicon.ico">`
     );
@@ -156,7 +156,7 @@ async function processHtmlFiles() {
     // Update any localhost references in HTML
     content = content.replace(
       /http:\/\/localhost:3001/g,
-      'https://YOUR_PROJECT_ID.web.app'
+      'https://takzir-95a86.web.app'
     );
     
     fs.writeFileSync(filePath, content);
