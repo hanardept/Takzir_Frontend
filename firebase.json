@@ -24,6 +24,9 @@
         "source": "/tickets",
         "destination": "/tickets.html"
       },
+      { "source": "/tickets/new",
+       "destination": "/tickets.html"
+      },
       {
         "source": "/import",
         "destination": "/import.html"

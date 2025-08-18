@@ -1,5 +1,5 @@
 // Global app configuration and utilities
-const API_BASE_URL = 'http://localhost:3000/api';
+const API_BASE_URL = 'https://takzir-backend-5915076344.europe-west4.run.app/api';
 
 // Global state
 let currentUser = null;

@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+  <meta charset="UTF-8">
+  <title>פתיחת תקלה חדשה</title>
+  <link rel="stylesheet" href="/css/styles.css">
+</head>
+<body>
+  <div id="nav"></div>
+  <main>
+    <h2>פתיחת תקלה חדשה</h2>
+    <form id="new-ticket-form">
+      <label>נושא:</label>
+      <input type="text" name="subject" required>
+
+      <label>תיאור:</label>
+      <textarea name="description" required></textarea>
+
+      <label>עדיפות:</label>
+      <select name="priority">
+        <option value="רגילה">רגילה</option>
+        <option value="גבוהה">גבוהה</option>
+      </select>
+
+      <button type="submit">שלח תקלה</button>
+    </form>
+    <div id="ticket-success" style="display:none">התקלה נוצרה בהצלחה!</div>
+    <div id="ticket-error" style="display:none;color:red"></div>
+  </main>
+  <script src="/js/new-ticket.js"></script>
+</body>
+</html>

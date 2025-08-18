@@ -22,7 +22,7 @@
                 <a href="/dashboard" class="nav-item active">לוח בקרה</a>
                 <a href="/tickets" class="nav-item">ניהול תקלות</a>
                 <a href="/users" class="nav-item" id="nav-users">ניהול משתמשים</a>
-                 <a href="/import" class="nav-item admin-only" id="import-nav" style="display: none;">ייבוא נתונים</a>
+                <a href="/import" class="nav-item admin-only" id="import-nav" style="display: none;">ייבוא נתונים</a>
             </div>
         </nav>
         
@@ -73,14 +73,17 @@
                                 id="view-all-tickets">
                             צפייה בכל התקלות
                         </button>
-                        <button class="btn btn-success" onclick="createNewTicket()" 
+                        
+                        <button class="btn btn-success" onclick="openNewTicketPage()" 
                                 id="create-ticket-quick" style="display: none;">
                             יצירת תקלה חדשה
                         </button>
+
                         <button class="btn btn-warning" onclick="exportDashboardData()" 
                                 id="export-data">
                             ייצוא נתונים
                         </button>
+                        
                         <button class="btn btn-info" onclick="window.location.href='/users'" 
                                 id="manage-users-quick" style="display: none;">
                             ניהול משתמשים
@@ -97,36 +100,27 @@
         let dashboardStats = {};
         
         // Initialize dashboard
-// Give app.js time to fully load
-setTimeout(async () => {
-    try {
-        // Check if function exists before calling
-        if (typeof checkAuthenticationSilent === 'function') {
-            await checkAuthenticationSilent();
-        } else {
-            console.warn('checkAuthenticationSilent not available, using fallback');
-            await checkAuthentication();
-        }
-        await loadDashboardData();
-        setupDashboardUI();
-    } catch (error) {
-        console.error('Dashboard initialization error:', error);
-        showError('שגיאה בטעינת לוח הבקרה');
-    }
-}, 100); // Small delay to ensure app.js is ready
+        setTimeout(async () => {
+            try {
+                if (typeof checkAuthenticationSilent === 'function') {
+                    await checkAuthenticationSilent();
+                } else {
+                    console.warn('checkAuthenticationSilent not available, using fallback');
+                    await checkAuthentication();
+                }
+                await loadDashboardData();
+                setupDashboardUI();
+            } catch (error) {
+                console.error('Dashboard initialization error:', error);
+                showError('שגיאה בטעינת לוח הבקרה');
+            }
+        }, 100);
 
-
-        
         async function loadDashboardData() {
             try {
                 showLoading('טוען נתוני לוח הבקרה...');
-                
-                // Load statistics
                 await loadDashboardStats();
-                
-                // Load recent tickets
                 await loadRecentTickets();
-                
             } catch (error) {
                 console.error('Load dashboard data error:', error);
                 throw error;
@@ -135,30 +129,24 @@ setTimeout(async () => {
             }
         }
         
-async function loadDashboardStats() {
-    try {
-        // Use the new dashboard stats endpoint
-        const result = await apiCall('/tickets/stats');
-        
-        // The backend already calculates these statistics for us
-        dashboardStats = {
-            total: result.data.totalTickets,
-            open: result.data.openTickets,
-            inProgress: result.data.inProgressTickets,
-            closed: result.data.closedTickets,
-            urgent: result.data.highPriorityTickets, // Maps to "דחופה" + "מבצעית"
-            critical: result.data.highPriorityTickets,
-            recurring: result.data.recurringTickets
-        };
-        
-        displayStats();
-        
-    } catch (error) {
-        console.error('Load stats error:', error);
-    }
-}
+        async function loadDashboardStats() {
+            try {
+                const result = await apiCall('/tickets/stats');
+                dashboardStats = {
+                    total: result.data.totalTickets,
+                    open: result.data.openTickets,
+                    inProgress: result.data.inProgressTickets,
+                    closed: result.data.closedTickets,
+                    urgent: result.data.highPriorityTickets,
+                    critical: result.data.highPriorityTickets,
+                    recurring: result.data.recurringTickets
+                };
+                displayStats();
+            } catch (error) {
+                console.error('Load stats error:', error);
+            }
+        }
 
-        
         function displayStats() {
             const statsGrid = document.getElementById('stats-grid');
             statsGrid.innerHTML = `
@@ -189,56 +177,53 @@ async function loadDashboardStats() {
             `;
         }
         
-       async function loadRecentTickets() {
-    try {
-        // Use the new dashboard recent tickets endpoint
-        const result = await apiCall('/tickets/recent?limit=10');
-        const tickets = result.data;
-        
-        const tbody = document.getElementById('recent-tickets-body');
-        
-        if (tickets.length === 0) {
-            tbody.innerHTML = `
-                <tr>
-                    <td colspan="6" class="text-center">לא נמצאו תקלות</td>
-                </tr>
-            `;
-            return;
+        async function loadRecentTickets() {
+            try {
+                const result = await apiCall('/tickets/recent?limit=10');
+                const tickets = result.data;
+                const tbody = document.getElementById('recent-tickets-body');
+                
+                if (tickets.length === 0) {
+                    tbody.innerHTML = `
+                        <tr>
+                            <td colspan="6" class="text-center">לא נמצאו תקלות</td>
+                        </tr>
+                    `;
+                    return;
+                }
+                
+                tbody.innerHTML = tickets.map(ticket => `
+                    <tr onclick="viewTicketFromDashboard('${ticket._id}')" class="cursor-pointer">
+                        <td>${ticket.ticketNumber}</td>
+                        <td>${ticket.command}</td>
+                        <td>${ticket.unit}</td>
+                        <td>
+                            <span class="status-badge priority-${getPriorityClass(ticket.priority)}">
+                                ${ticket.priority}
+                            </span>
+                        </td>
+                        <td>
+                            <span class="status-badge status-${getStatusClass(ticket.status)}">
+                                ${ticket.status}
+                            </span>
+                        </td>
+                        <td>${formatDate(ticket.openDate)}</td>
+                    </tr>
+                `).join('');
+                
+            } catch (error) {
+                console.error('Load recent tickets error:', error);
+                const tbody = document.getElementById('recent-tickets-body');
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center">שגיאה בטעינת התקלות</td>
+                    </tr>
+                `;
+            }
         }
-        
-        tbody.innerHTML = tickets.map(ticket => `
-            <tr onclick="viewTicketFromDashboard('${ticket._id}')" class="cursor-pointer">
-                <td>${ticket.ticketNumber}</td>
-                <td>${ticket.command}</td>
-                <td>${ticket.unit}</td>
-                <td>
-                    <span class="status-badge priority-${getPriorityClass(ticket.priority)}">
-                        ${ticket.priority}
-                    </span>
-                </td>
-                <td>
-                    <span class="status-badge status-${getStatusClass(ticket.status)}">
-                        ${ticket.status}
-                    </span>
-                </td>
-                <td>${formatDate(ticket.openDate)}</td>
-            </tr>
-        `).join('');
-        
-    } catch (error) {
-        console.error('Load recent tickets error:', error);
-        const tbody = document.getElementById('recent-tickets-body');
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="6" class="text-center">שגיאה בטעינת התקלות</td>
-            </tr>
-        `;
-    }
-}
 
-        
         function setupDashboardUI() {
-            // Show/hide buttons based on user role
+            // Show/hide buttons based on user role - SINGLE LOCATION FOR ROLE CHECKING
             if (currentUser) {
                 if (currentUser.role === 'admin' || currentUser.role === 'technician') {
                     document.getElementById('create-ticket-quick').style.display = 'inline-block';
@@ -253,12 +238,13 @@ async function loadDashboardStats() {
             }
         }
         
-        function viewTicketFromDashboard(ticketId) {
-            window.location.href = `/tickets?view=${ticketId}`;
+        // NEW TICKET FUNCTION - CLEAN AND SIMPLE
+        function openNewTicketPage() {
+            window.location.href = '/new-ticket';
         }
         
-        function createNewTicket() {
-            window.location.href = '/tickets?action=create';
+        function viewTicketFromDashboard(ticketId) {
+            window.location.href = `/tickets?view=${ticketId}`;
         }
         
         async function exportDashboardData() {

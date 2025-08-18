@@ -97,26 +97,54 @@
     <script src="/js/utils.js"></script>
     <script src="/js/tickets.js"></script>
     
-    <script>
-        // Handle URL parameters for specific actions
-        document.addEventListener('DOMContentLoaded', () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const action = urlParams.get('action');
-            const viewTicketId = urlParams.get('view');
-            
-            if (action === 'create' && (currentUser?.role === 'admin' || currentUser?.role === 'technician')) {
-                setTimeout(() => showCreateTicketForm(), 1000);
-            }
-            
-            if (viewTicketId) {
-                setTimeout(() => viewTicket(viewTicketId), 1000);
-            }
-        });
-        
-        function refreshTickets() {
-            loadTickets(currentPage, currentFilters);
+   <script>
+  document.addEventListener('DOMContentLoaded', async () => {
+    try {
+      // ודא אימות נטען לפני טיפול בפרמטרים
+      if (typeof checkAuthenticationSilent === 'function') {
+        await checkAuthenticationSilent();
+      } else if (typeof checkAuthentication === 'function') {
+        await checkAuthentication();
+      }
+
+      const urlParams = new URLSearchParams(window.location.search);
+      const action = urlParams.get('action');
+      const viewTicketId = urlParams.get('view');
+
+      // ודא ש-currentUser מאוכלס לפני בדיקת הרשאות
+      const waitForUser = () => new Promise(resolve => {
+        let tries = 0;
+        const t = setInterval(() => {
+          if (window.currentUser || tries++ > 50) {
+            clearInterval(t);
+            resolve();
+          }
+        }, 50);
+      });
+      await waitForUser();
+
+      if (action === 'create' && (currentUser?.role === 'admin' || currentUser?.role === 'technician')) {
+        // ודא שהפונקציה קיימת
+        if (typeof showCreateTicketForm === 'function') {
+          showCreateTicketForm();
+        } else {
+          console.error('showCreateTicketForm not found');
         }
-    </script>
+      }
+
+      if (viewTicketId) {
+        if (typeof viewTicket === 'function') {
+          viewTicket(viewTicketId);
+        } else {
+          console.error('viewTicket not found');
+        }
+      }
+    } catch (e) {
+      console.error('Init error:', e);
+    }
+  });
+</script>
+
     
     <style>
         .ticket-actions-header {

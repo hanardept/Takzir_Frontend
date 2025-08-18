@@ -4,13 +4,127 @@ let currentFilters = {};
 let currentPage = 1;
 let pageSize = 20;
 
+// Fallback to stop infinite loading after 10 seconds
+setTimeout(() => {
+  if (typeof hideLoading === 'function') {
+    hideLoading();
+  }
+}, 10000);
+
 // Initialize tickets page
-document.addEventListener('DOMContentLoaded', () => {
-  if (window.location.pathname === '/tickets') {
-    initializeTicketsPage();
+// Helper function to wait for currentUser
+// Helper function to wait for currentUser (check global, not window)
+async function waitForCurrentUser(maxTries = 100, interval = 50) {
+  return new Promise((resolve) => {
+    let tries = 0;
+    const timer = setInterval(() => {
+      // Check global currentUser (not window.currentUser)
+      const userExists = typeof currentUser !== 'undefined' && currentUser !== null;
+      
+      if (userExists || tries >= maxTries) {
+        clearInterval(timer);
+        console.log('Wait complete. currentUser:', userExists ? currentUser : 'still undefined');
+        
+        // Set window.currentUser for consistency with the rest of the code
+        if (userExists && !window.currentUser) {
+          window.currentUser = currentUser;
+        }
+        
+        resolve();
+      }
+      tries++;
+    }, interval);
+  });
+}
+
+
+// Initialize tickets page
+document.addEventListener('DOMContentLoaded', async () => {
+  const p = window.location.pathname;
+  console.log('=== TICKETS PAGE DEBUG ===');
+  console.log('Current path:', p);
+  console.log('Current user at start:', window.currentUser);
+  
+  if (p === '/tickets' || p === '/tickets/new') {
+    try {
+      // CRITICAL: Wait for currentUser to be populated by app.js
+      console.log('Waiting for currentUser to be populated...');
+      await waitForCurrentUser();
+      
+      console.log('=== USER READY ===');
+      console.log('Final currentUser:', window.currentUser);
+      console.log('User role:', window.currentUser?.role);
+      console.log('Initializing tickets page for:', p);
+      
+      // For /tickets/new, handle create modal first before loading tickets
+      if (p === '/tickets/new') {
+        await initializeTicketsPageForCreate();
+      } else {
+        await initializeTicketsPage();
+      }
+
+    } catch (error) {
+      console.error('Page initialization failed:', error);
+      if (typeof hideLoading === 'function') {
+        hideLoading();
+      }
+      if (typeof showError === 'function') {
+        showError('שגיאה בטעינת הדף');
+      }
+    }
   }
 });
 
+
+// Special initialization for /tickets/new
+async function initializeTicketsPageForCreate() {
+  try {
+    // Load commands first (needed for create form)
+    await loadCommands();
+    
+    // Setup basic UI without loading tickets yet
+    setupTicketEventListeners();
+    setupFilters();
+
+    console.log('Checking permissions for currentUser:', currentUser);
+
+    // Auto-open create form for /tickets/new
+    if (currentUser && (currentUser.role === 'admin' || currentUser.role === 'technician')) {
+      if (typeof showCreateTicketForm === 'function') {
+        console.log('User authorized - opening create form');
+        // Small delay to ensure DOM is ready
+        setTimeout(() => {
+          try {
+            showCreateTicketForm();
+          } catch (e) {
+            console.error('Failed to show create form:', e);
+          }
+        }, 100);
+      } else {
+        console.error('showCreateTicketForm not found');
+      }
+    } else {
+      console.warn('User not authorized for ticket creation:', currentUser?.role);
+      // Redirect unauthorized users to regular tickets page
+      window.location.href = '/tickets';
+      return;
+    }
+
+    // Load tickets in background (after modal opens)
+    setTimeout(() => {
+      loadTickets(currentPage, currentFilters);
+    }, 500);
+
+  } catch (error) {
+    console.error('Tickets page initialization error:', error);
+    if (typeof showError === 'function') {
+      showError('שגיאה בטעינת דף התקלות');
+    }
+    throw error;
+  }
+}
+
+// Regular initialization for /tickets
 async function initializeTicketsPage() {
   try {
     await loadCommands();
@@ -19,14 +133,19 @@ async function initializeTicketsPage() {
     setupFilters();
   } catch (error) {
     console.error('Tickets page initialization error:', error);
-    showError('שגיאה בטעינת דף התקלות');
+    if (typeof showError === 'function') {
+      showError('שגיאה בטעינת דף התקלות');
+    }
+    throw error;
   }
 }
 
 // Load tickets from API
 async function loadTickets(page = 1, filters = {}) {
   try {
-    showLoading('טוען תקלות...');
+    if (typeof showLoading === 'function') {
+      showLoading('טוען תקלות...');
+    }
     
     const queryParams = new URLSearchParams({
       page: page.toString(),
@@ -42,9 +161,13 @@ async function loadTickets(page = 1, filters = {}) {
     
   } catch (error) {
     console.error('Load tickets error:', error);
-    showError('שגיאה בטעינת התקלות');
+    if (typeof showError === 'function') {
+      showError('שגיאה בטעינת התקלות');
+    }
   } finally {
-    hideLoading();
+    if (typeof hideLoading === 'function') {
+      hideLoading();
+    }
   }
 }
 
@@ -56,7 +179,7 @@ function displayTickets(tickets) {
   if (tickets.length === 0) {
     ticketsTableBody.innerHTML = `
       <tr>
-        <td colspan="8" class="text-center">לא נמצאו תקלות</td>
+        <td colspan="9" class="text-center">לא נמצאו תקלות</td>
       </tr>
     `;
     return;
@@ -99,7 +222,9 @@ function displayTickets(tickets) {
 // View ticket details
 async function viewTicket(ticketId) {
   try {
-    showLoading('טוען פרטי תקלה...');
+    if (typeof showLoading === 'function') {
+      showLoading('טוען פרטי תקלה...');
+    }
     
     const result = await apiCall(`/tickets/${ticketId}`);
     const ticket = result.data;
@@ -108,9 +233,13 @@ async function viewTicket(ticketId) {
     
   } catch (error) {
     console.error('View ticket error:', error);
-    showError('שגיאה בטעינת פרטי התקלה');
+    if (typeof showError === 'function') {
+      showError('שגיאה בטעינת פרטי התקלה');
+    }
   } finally {
-    hideLoading();
+    if (typeof hideLoading === 'function') {
+      hideLoading();
+    }
   }
 }
 
@@ -208,20 +337,35 @@ function displayTicketModal(ticket) {
     </div>
   `;
   
-  showModal('ticket-modal');
+  if (typeof showModal === 'function') {
+    showModal('ticket-modal');
+  }
 }
 
 // Create new ticket
 function showCreateTicketForm() {
+  console.log('showCreateTicketForm called');
   const modal = document.getElementById('create-ticket-modal');
   if (!modal) {
+    console.log('Creating new create ticket modal');
     createCreateTicketModal();
   } else {
-    showModal('create-ticket-modal');
+    console.log('Showing existing create ticket modal');
+    if (typeof showModal === 'function') {
+      showModal('create-ticket-modal');
+    }
   }
 }
 
 function createCreateTicketModal() {
+  console.log('createCreateTicketModal called');
+  
+  // Remove existing modal if any
+  const existingModal = document.getElementById('create-ticket-modal');
+  if (existingModal) {
+    existingModal.remove();
+  }
+
   const modal = document.createElement('div');
   modal.id = 'create-ticket-modal';
   modal.className = 'modal';
@@ -248,6 +392,12 @@ function createCreateTicketModal() {
             </select>
           </div>
           
+          <div class="form-group">
+            <label for="ticket-subject">נושא התקלה</label>
+            <input type="text" id="ticket-subject" name="subject" class="form-control" 
+                   placeholder="נושא קצר לתקלה...">
+          </div>
+
           <div class="form-group">
             <label for="ticket-priority">עדיפות *</label>
             <select id="ticket-priority" name="priority" class="form-control" required>
@@ -282,47 +432,77 @@ function createCreateTicketModal() {
   `;
   
   document.body.appendChild(modal);
+  console.log('Modal added to body');
+  
+  // Load commands into select
   loadCommandsIntoSelect('ticket-command');
-  showModal('create-ticket-modal');
+  
+  // Show modal
+  if (typeof showModal === 'function') {
+    console.log('Calling showModal');
+    showModal('create-ticket-modal');
+  } else {
+    console.error('showModal function not available');
+    // Fallback: show modal manually
+    modal.style.display = 'block';
+  }
 }
 
 // Handle create ticket form submission
 async function handleCreateTicket(event) {
   event.preventDefault();
   
+ console.log('=== FRONTEND CREATE TICKET DEBUG ===');
+  console.log('Current user:', currentUser);
+
   try {
     const formData = new FormData(event.target);
     const ticketData = {
       command: formData.get('command'),
       unit: formData.get('unit'),
-      priority: formData.get('priority'),
+      priority: formData.get('priority') || 'רגילה',
       description: formData.get('description'),
+      subject: formData.get('subject'),
       isRecurring: formData.get('isRecurring') === 'on'
     };
     
-    showLoading('יוצר תקלה...');
+    if (typeof showLoading === 'function') {
+      showLoading('יוצר תקלה...');
+    }
     
     const result = await apiCall('/tickets', {
       method: 'POST',
       body: JSON.stringify(ticketData)
     });
     
-    showSuccess(result.message);
-    hideModal('create-ticket-modal');
-    await loadTickets(currentPage, currentFilters);
+    if (typeof showSuccess === 'function') {
+      showSuccess(result.message);
+    }
+    if (typeof hideModal === 'function') {
+      hideModal('create-ticket-modal');
+    }
+    
+    // Navigate to regular tickets page after creation
+    window.location.href = '/tickets';
     
   } catch (error) {
     console.error('Create ticket error:', error);
-    showError(error.message || 'שגיאה ביצירת התקלה');
+    if (typeof showError === 'function') {
+      showError(error.message || 'שגיאה ביצירת התקלה');
+    }
   } finally {
-    hideLoading();
+    if (typeof hideLoading === 'function') {
+      hideLoading();
+    }
   }
 }
 
 // Edit ticket
 async function editTicket(ticketId) {
   try {
-    showLoading('טוען נתוני תקלה...');
+    if (typeof showLoading === 'function') {
+      showLoading('טוען נתוני תקלה...');
+    }
     
     const result = await apiCall(`/tickets/${ticketId}`);
     const ticket = result.data;
@@ -331,9 +511,13 @@ async function editTicket(ticketId) {
     
   } catch (error) {
     console.error('Edit ticket error:', error);
-    showError('שגיאה בטעינת נתוני התקלה');
+    if (typeof showError === 'function') {
+      showError('שגיאה בטעינת נתוני התקלה');
+    }
   } finally {
-    hideLoading();
+    if (typeof hideLoading === 'function') {
+      hideLoading();
+    }
   }
 }
 
@@ -404,7 +588,9 @@ function showEditTicketForm(ticket) {
   `;
   
   document.body.appendChild(editModal);
-  showModal('edit-ticket-modal');
+  if (typeof showModal === 'function') {
+    showModal('edit-ticket-modal');
+  }
 }
 
 // Handle edit ticket form submission
@@ -421,23 +607,33 @@ async function handleEditTicket(event, ticketId) {
       assignedTechnician: formData.get('assignedTechnician')
     };
     
-    showLoading('מעדכן תקלה...');
+    if (typeof showLoading === 'function') {
+      showLoading('מעדכן תקלה...');
+    }
     
     const result = await apiCall(`/tickets/${ticketId}`, {
       method: 'PUT',
       body: JSON.stringify(ticketData)
     });
     
-    showSuccess(result.message);
-    hideModal('edit-ticket-modal');
-    hideModal('ticket-modal');
+    if (typeof showSuccess === 'function') {
+      showSuccess(result.message);
+    }
+    if (typeof hideModal === 'function') {
+      hideModal('edit-ticket-modal');
+      hideModal('ticket-modal');
+    }
     await loadTickets(currentPage, currentFilters);
     
   } catch (error) {
     console.error('Edit ticket error:', error);
-    showError(error.message || 'שגיאה בעדכון התקלה');
+    if (typeof showError === 'function') {
+      showError(error.message || 'שגיאה בעדכון התקלה');
+    }
   } finally {
-    hideLoading();
+    if (typeof hideLoading === 'function') {
+      hideLoading();
+    }
   }
 }
 
@@ -472,7 +668,9 @@ function showAddCommentForm(ticketId) {
   `;
   
   document.body.appendChild(modal);
-  showModal('add-comment-modal');
+  if (typeof showModal === 'function') {
+    showModal('add-comment-modal');
+  }
 }
 
 // Handle add comment form submission
@@ -485,23 +683,33 @@ async function handleAddComment(event, ticketId) {
       content: formData.get('content')
     };
     
-    showLoading('מוסיף הערה...');
+    if (typeof showLoading === 'function') {
+      showLoading('מוסיף הערה...');
+    }
     
     const result = await apiCall(`/tickets/${ticketId}/comments`, {
       method: 'POST',
       body: JSON.stringify(commentData)
     });
     
-    showSuccess(result.message);
-    hideModal('add-comment-modal');
+    if (typeof showSuccess === 'function') {
+      showSuccess(result.message);
+    }
+    if (typeof hideModal === 'function') {
+      hideModal('add-comment-modal');
+    }
     // Refresh ticket view
     await viewTicket(ticketId);
     
   } catch (error) {
     console.error('Add comment error:', error);
-    showError(error.message || 'שגיאה בהוספת ההערה');
+    if (typeof showError === 'function') {
+      showError(error.message || 'שגיאה בהוספת ההערה');
+    }
   } finally {
-    hideLoading();
+    if (typeof hideLoading === 'function') {
+      hideLoading();
+    }
   }
 }
 
@@ -512,20 +720,28 @@ async function deleteTicket(ticketId) {
   }
   
   try {
-    showLoading('מוחק תקלה...');
+    if (typeof showLoading === 'function') {
+      showLoading('מוחק תקלה...');
+    }
     
     const result = await apiCall(`/tickets/${ticketId}`, {
       method: 'DELETE'
     });
     
-    showSuccess(result.message);
+    if (typeof showSuccess === 'function') {
+      showSuccess(result.message);
+    }
     await loadTickets(currentPage, currentFilters);
     
   } catch (error) {
     console.error('Delete ticket error:', error);
-    showError(error.message || 'שגיאה במחיקת התקלה');
+    if (typeof showError === 'function') {
+      showError(error.message || 'שגיאה במחיקת התקלה');
+    }
   } finally {
-    hideLoading();
+    if (typeof hideLoading === 'function') {
+      hideLoading();
+    }
   }
 }
 
@@ -573,6 +789,7 @@ async function loadCommands() {
     window.commands = result.data;
   } catch (error) {
     console.error('Load commands error:', error);
+    throw error;
   }
 }
 
@@ -601,13 +818,13 @@ async function loadUnitsForCommand(commandName, unitSelectId) {
     if (!unitSelect) return;
     
     unitSelect.innerHTML = '<option value="">בחר יחידה</option>';
+    
     units.forEach(unit => {
       const option = document.createElement('option');
       option.value = unit.name;
       option.textContent = unit.name;
       unitSelect.appendChild(option);
     });
-    
   } catch (error) {
     console.error('Load units error:', error);
   }
@@ -712,14 +929,17 @@ function clearFilters() {
 
 function exportTickets() {
   const queryParams = new URLSearchParams(currentFilters);
-  exportToExcel(`/tickets/export/excel?${queryParams}`, `tickets_${formatDateOnly(new Date())}.xlsx`);
+  if (typeof exportToExcel === 'function') {
+    exportToExcel(`/tickets/export/excel?${queryParams}`, `tickets_${formatDateOnly(new Date())}.xlsx`);
+  }
 }
 
 // Setup event listeners
 function setupTicketEventListeners() {
   // Create ticket button
   const createTicketBtn = document.getElementById('create-ticket-btn');
-  if (createTicketBtn && (currentUser.role === 'admin' || currentUser.role === 'technician')) {
+ if (createTicketBtn && currentUser && (currentUser.role === 'admin' || currentUser.role === 'technician')) {
+    createTicketBtn.style.display = 'inline-block';
     createTicketBtn.onclick = showCreateTicketForm;
   }
 }
@@ -731,10 +951,12 @@ function displayPagination(pagination) {
   
   paginationContainer.innerHTML = '';
   
-  const paginationElement = createPagination(pagination, (page) => {
-    currentPage = page;
-    loadTickets(currentPage, currentFilters);
-  });
-  
-  paginationContainer.appendChild(paginationElement);
+  if (typeof createPagination === 'function') {
+    const paginationElement = createPagination(pagination, (page) => {
+      currentPage = page;
+      loadTickets(currentPage, currentFilters);
+    });
+    
+    paginationContainer.appendChild(paginationElement);
+  }
 }
