@@ -30,6 +30,7 @@ const limiter = rateLimit({
   max: 200,
   message: 'יותר מדי בקשות'
 });
+
 app.use(limiter);
 
 // Serve static files
@@ -59,9 +60,17 @@ app.get('/users', (req, res) => {
   res.sendFile(path.join(__dirname, 'views', 'users.html'));
 });
 
-// Serve import page (admin only)
 app.get('/import', (req, res) => {
-  res.sendFile(path.join(__dirname, 'views', 'import.html'));
+  res.sendFile(path.join(__dirname, 'dist', 'import.html'));
+});
+
+// Both routes for new ticket creation
+app.get('/new-ticket', (req, res) => {
+  res.sendFile(path.join(__dirname, 'dist', 'new-ticket.html'));
+});
+
+app.get('/tickets/new', (req, res) => {
+  res.sendFile(path.join(__dirname, 'dist', 'new-ticket.html'));
 });
 
 // 404 handler
@@ -74,4 +83,11 @@ const PORT = process.env.FRONTEND_PORT || 3001;
 app.listen(PORT, () => {
   console.log(`🎨 Frontend server running on port ${PORT}`);
   console.log(`🌐 Application URL: http://localhost:${PORT}`);
+  console.log('📍 Available routes:');
+  console.log('   - /dashboard');
+  console.log('   - /tickets');
+  console.log('   - /new-ticket');
+  console.log('   - /tickets/new');
+  console.log('   - /users');
+  console.log('   - /import');
 });

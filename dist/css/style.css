@@ -220,7 +220,7 @@ body {
 }
 
 .table tbody tr:nth-child(even) {
-  background: #fafafa;
+  background: #41505f;
 }
 
 /* Status badges */

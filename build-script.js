@@ -39,6 +39,9 @@ async function build() {
     // Step 4: Create Firebase configuration
     await createFirebaseConfig();
     
+ const { execSync } = require('child_process');
+  execSync('node inject-env.js', { stdio: 'inherit' });
+  
     console.log('✅ Build completed successfully!');
     console.log('📦 Build output: ./dist/');
     console.log('🔧 Next steps:');
@@ -111,10 +114,11 @@ async function updateApiUrls() {
       let content = fs.readFileSync(file, 'utf8');
       
       // Update localhost API URLs to production
-      const updatedContent = content.replace(
-        /const API_BASE_URL = ['"]http:\/\/localhost:3000\/api['"];?/g,
-        `const API_BASE_URL = '${buildConfig.productionApiUrl}';`
-      );
+     const updatedContent = content.replace(
+  /const\s+API_BASE_URL\s*=\s*['"]http:\/\/localhost:3000\/api['"];?/g,
+  `const API_BASE_URL = '${buildConfig.productionApiUrl}';`
+);
+
       
       // Also update any hardcoded localhost references
       const finalContent = updatedContent.replace(

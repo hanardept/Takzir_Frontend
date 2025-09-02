@@ -3,7 +3,12 @@
 <head>
     <!-- Production Deployment -->
     <meta name="robots" content="noindex, nofollow">
-    <meta name="description" content="Military Equipment Maintenance Ticket System - IDF">
+    <meta name="description" content="Takzir Maintenance Ticket System - IDF">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <!-- Production Deployment -->
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="description" content="Takzir Maintenance Ticket System - IDF">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <meta charset="UTF-8">
@@ -38,7 +43,7 @@
         
         <!-- Action Buttons -->
         <div class="ticket-actions-header">
-            <button class="btn btn-success" id="create-ticket-btn" style="display: none;">
+           <button class="btn btn-success" onclick="window.location.href='/new-ticket'" id="create-ticket-btn">
                 יצירת תקלה חדשה
             </button>
             <button class="btn btn-info" onclick="refreshTickets()">
@@ -57,6 +62,7 @@
                         <thead>
                             <tr>
                                 <th>מספר תקלה</th>
+                                <th>נושא התקלה</th>
                                 <th>פיקוד</th>
                                 <th>יחידה</th>
                                 <th>עדיפות</th>
@@ -93,30 +99,186 @@
         </div>
     </div>
 
+    <script src="/js/config.js"></script>
     <script src="/js/app.js"></script>
-    <script src="/js/utils.js"></script>
     <script src="/js/tickets.js"></script>
+    <script src="/js/utils.js"></script>
     
-    <script>
-        // Handle URL parameters for specific actions
-        document.addEventListener('DOMContentLoaded', () => {
-            const urlParams = new URLSearchParams(window.location.search);
-            const action = urlParams.get('action');
-            const viewTicketId = urlParams.get('view');
+    
+<script>
+    // Global variables for pagination and filtering
+    let currentPage = 1;
+    let currentFilters = {};
+
+    // Load tickets function - THE MISSING FUNCTION
+    async function loadTickets(page = 1, filters = {}) {
+        try {
+            console.log('🔄 Loading tickets...', { page, filters });
             
-            if (action === 'create' && (currentUser?.role === 'admin' || currentUser?.role === 'technician')) {
-                setTimeout(() => showCreateTicketForm(), 1000);
+            // Show loading spinner
+            const tableBody = document.getElementById('tickets-table-body');
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="9" class="text-center">
+                        <div class="loading">
+                            <div class="spinner"></div>
+                            <p>טוען תקלות...</p>
+                        </div>
+                    </td>
+                </tr>
+            `;
+
+            // Build query parameters
+            const params = new URLSearchParams({
+                page: page,
+                limit: 20,
+                ...filters
+            });
+
+            // Fetch tickets from backend
+            const response = await fetch(`${window.API_BASE_URL}/tickets?${params}`, {
+                method: 'GET',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
             }
+
+            const result = await response.json();
             
-            if (viewTicketId) {
-                setTimeout(() => viewTicket(viewTicketId), 1000);
+            if (!result.success) {
+                throw new Error(result.message || 'Failed to load tickets');
             }
-        });
-        
-        function refreshTickets() {
-            loadTickets(currentPage, currentFilters);
+
+            console.log('✅ Tickets loaded:', result.data);
+
+            // Update global state
+            currentPage = page;
+            currentFilters = filters;
+
+            // Render tickets
+            renderTickets(result.data.tickets || []);
+
+            // Update pagination if provided
+            if (result.data.pagination) {
+                renderPagination(result.data.pagination);
+            }
+
+        } catch (error) {
+            console.error('❌ Error loading tickets:', error);
+            showTicketsError('שגיאה בטעינת התקלות: ' + error.message);
         }
-    </script>
+    }
+
+    // Render tickets in table
+    function renderTickets(tickets) {
+        const tableBody = document.getElementById('tickets-table-body');
+        
+        if (!tickets || tickets.length === 0) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="9" class="text-center">אין תקלות להצגה</td>
+                </tr>
+            `;
+            return;
+        }
+
+        tableBody.innerHTML = tickets.map(ticket => `
+            <tr>
+                <td>${ticket.ticketNumber || ''}</td>
+                <td>${ticket.subject || '-'}</td>
+                <td>${ticket.command || ''}</td>
+                <td>${ticket.unit || ''}</td>
+                <td><span class="priority-${(ticket.priority || '').toLowerCase()}">${ticket.priority || ''}</span></td>
+                <td><span class="status-${(ticket.status || '').toLowerCase()}">${ticket.status || ''}</span></td>
+                <td>${ticket.isRecurring ? 'כן' : 'לא'}</td>
+                <td class="ticket-description" title="${ticket.description || ''}">${ticket.description || ''}</td>
+                <td>${formatDate(ticket.openDate)}</td>
+                <td class="ticket-actions">
+                    <button class="btn btn-sm btn-info" onclick="viewTicket('${ticket._id}')">צפייה</button>
+                    ${(currentUser?.role === 'admin' || currentUser?.role === 'technician') ? 
+                        `<button class="btn btn-sm btn-warning" onclick="editTicket('${ticket._id}')">עריכה</button>` : ''}
+                </td>
+            </tr>
+        `).join('');
+    }
+
+    // Show error in tickets table
+    function showTicketsError(message) {
+        const tableBody = document.getElementById('tickets-table-body');
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="9" class="text-center" style="color: #ef4444;">
+                    ${message}
+                    <br><br>
+                    <button class="btn btn-info" onclick="loadTickets()">נסה שוב</button>
+                </td>
+            </tr>
+        `;
+    }
+
+    // Format date helper
+    function formatDate(dateString) {
+        if (!dateString) return '';
+        try {
+            return new Date(dateString).toLocaleDateString('he-IL');
+        } catch {
+            return dateString;
+        }
+    }
+
+    // Refresh tickets function
+    function refreshTickets() {
+        console.log('🔄 Refreshing tickets...');
+        loadTickets(currentPage, currentFilters);
+    }
+
+    // Handle URL parameters for specific actions
+    document.addEventListener('DOMContentLoaded', () => {
+        // Load tickets automatically when page loads
+        loadTickets();
+
+        // Handle URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        const action = urlParams.get('action');
+        const viewTicketId = urlParams.get('view');
+        
+        if (action === 'create' && (currentUser?.role === 'admin' || currentUser?.role === 'technician')) {
+            setTimeout(() => showCreateTicketForm(), 1000);
+        }
+        
+        if (viewTicketId) {
+            setTimeout(() => viewTicket(viewTicketId), 1000);
+        }
+    });
+
+    // Placeholder functions (implement these if needed)
+    function renderPagination(pagination) {
+        console.log('Pagination:', pagination);
+        // TODO: Implement pagination rendering
+    }
+
+    function viewTicket(ticketId) {
+        console.log('View ticket:', ticketId);
+        // TODO: Implement ticket viewing
+    }
+
+    function editTicket(ticketId) {
+        console.log('Edit ticket:', ticketId);
+        // TODO: Implement ticket editing
+    }
+
+    function showCreateTicketForm() {
+        console.log('Show create ticket form');
+        // TODO: Implement create ticket form
+    }
+</script>
+
+
     
     <style>
         .ticket-actions-header {

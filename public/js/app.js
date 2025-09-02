@@ -1,69 +1,194 @@
 // Global app configuration and utilities
-const API_BASE_URL = 'http://localhost:3000/api';
-
 // Global state
 let currentUser = null;
 let authToken = null;
+let authCheckInProgress = false;
+let lastAuthCheck = 0;
+const AUTH_CACHE_DURATION = 30000; // 30 seconds
+
+// Add session persistence functions
+// Add session persistence functions
+function saveUserSession(user) {
+    if (user) {
+        try {
+            sessionStorage.setItem('currentUser', JSON.stringify(user));
+            sessionStorage.setItem('lastAuthCheck', Date.now().toString());
+            console.log('✅ Session saved for user:', user.username);
+        } catch (error) {
+            console.error('Error saving user session:', error);
+        }
+    }
+}
+
+function loadUserSession() {
+    try {
+        const savedUser = sessionStorage.getItem('currentUser');
+        const savedTime = sessionStorage.getItem('lastAuthCheck');
+        
+        if (savedUser && savedTime) {
+            const timeDiff = Date.now() - parseInt(savedTime);
+            // Use saved user if less than 30 seconds old
+            if (timeDiff < AUTH_CACHE_DURATION) {
+                currentUser = JSON.parse(savedUser);
+                lastAuthCheck = parseInt(savedTime);
+                console.log('✅ Restored user session:', currentUser.username);
+                return true;
+            } else {
+                console.log('⏰ Saved session expired, clearing...');
+                clearUserSession();
+            }
+        }
+    } catch (error) {
+        console.error('Error loading user session:', error);
+        clearUserSession();
+    }
+    return false;
+}
+
+function clearUserSession() {
+    try {
+        sessionStorage.removeItem('currentUser');
+        sessionStorage.removeItem('lastAuthCheck');
+        console.log('🗑️ Session cleared');
+    } catch (error) {
+        console.error('Error clearing user session:', error);
+    }
+}
 
 // Initialize app
 document.addEventListener('DOMContentLoaded', () => {
-  initializeApp();
+  // Add small delay to avoid conflicts with page-specific scripts
+  setTimeout(initializeApp, 100);
 });
 
 async function initializeApp() {
-  try {
-    await checkAuthentication();
-    setupGlobalEventListeners();
-    setupRTLSupport();
-  } catch (error) {
-    console.error('App initialization error:', error);
-  }
-}
-
-// Authentication functions
-// Authentication functions
-async function checkAuthentication() {
-  try {
-    // Only show loading on login page or initial load
-    if (window.location.pathname === '/login' || !currentUser) {
-      showLoading('בודק הרשאות...');
+    // Skip auth check only on login page
+    if (window.location.pathname === '/login') {
+        console.log('Skipping auth check - on login page');
+        setupGlobalEventListeners();
+        setupRTLSupport();
+        return;
     }
     
-    const response = await fetch(`${API_BASE_URL}/auth/me`, {
-      method: 'GET',
-      credentials: 'include',
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    });
-
-    if (response.ok) {
-      const result = await response.json();
-      currentUser = result.user;
-      updateUserInterface();
-    } else {
-      if (window.location.pathname !== '/login') {
-        window.location.href = '/login';
-      }
+    try {
+        console.log('Running auth check on:', window.location.pathname);
+        
+        // Try to restore session first for immediate UI update
+        const sessionRestored = loadUserSession();
+        if (sessionRestored) {
+            updateUserInterface();
+            console.log('Session restored, validating with server...');
+        }
+        
+        // Always validate with server, even if session was restored
+        await checkAuthentication();
+        setupGlobalEventListeners();
+        setupRTLSupport();
+    } catch (error) {
+        console.error('App initialization error:', error);
     }
-  } catch (error) {
-    console.error('Authentication check failed:', error);
-    if (window.location.pathname !== '/login') {
-      window.location.href = '/login';
-    }
-  } finally {
-    // Only hide loading if we showed it
-    if (window.location.pathname === '/login' || !currentUser) {
-      hideLoading();
-    }
-  }
 }
 
+// Debounced authentication check
+// Enhanced checkAuthentication function in app.js
+async function checkAuthentication() {
+    // Prevent multiple simultaneous calls
+    if (authCheckInProgress) {
+        console.log('Auth check already in progress, skipping');
+        return;
+    }
 
-// Silent authentication check (no loading popup)
+    // Check cache to avoid unnecessary calls
+    const now = Date.now();
+    if (currentUser && (now - lastAuthCheck) < AUTH_CACHE_DURATION) {
+        console.log('Using cached auth data');
+        return;
+    }
+
+    console.log('Starting authentication check...');
+    authCheckInProgress = true;
+    
+    try {
+        // Only show loading on login page or initial load
+        if (window.location.pathname === '/login' || !currentUser) {
+            showLoading('בודק הרשאות...');
+        }
+        
+        const response = await fetch(`http://localhost:3000/api/auth/me`, {
+            method: 'GET',
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json'
+            }
+        });
+
+        console.log('Auth response status:', response.status);
+
+        if (response.ok) {
+    const result = await response.json();
+    console.log('Auth successful, user:', result.user);
+    currentUser = result.user;
+    lastAuthCheck = now;
+    
+    // Save session for persistence
+    saveUserSession(currentUser);
+    
+    updateUserInterface();
+}
+ else if (response.status === 401) {
+            console.log('Auth failed - 401 Unauthorized');
+            currentUser = null;
+            // Only redirect if not already on login page
+            if (window.location.pathname !== '/login') {
+                console.log('Redirecting to login page');
+                window.location.href = '/login';
+            }
+        } else if (response.status === 429) {
+            console.warn('Rate limited, waiting before next auth check');
+            setTimeout(() => {
+                authCheckInProgress = false;
+            }, 10000);
+            return;
+        } else {
+            console.error('Auth check failed with status:', response.status);
+            currentUser = null;
+            if (window.location.pathname !== '/login') {
+                window.location.href = '/login';
+            }
+        }
+    } catch (error) {
+        console.error('Authentication check failed:', error);
+        currentUser = null;
+        if (window.location.pathname !== '/login') {
+            console.log('Auth error - redirecting to login');
+            window.location.href = '/login';
+        }
+    } finally {
+        authCheckInProgress = false;
+        // Only hide loading if we showed it
+        if (window.location.pathname === '/login' || !currentUser) {
+            hideLoading();
+        }
+    }
+}
+
+// Silent authentication check with same protections
 async function checkAuthenticationSilent() {
+  // Use same protection as main auth check
+  if (authCheckInProgress) {
+    return currentUser ? true : false;
+  }
+
+  // Check cache first
+  const now = Date.now();
+  if (currentUser && (now - lastAuthCheck) < AUTH_CACHE_DURATION) {
+    return true;
+  }
+
+  authCheckInProgress = true;
+
   try {
-    const response = await fetch(`${API_BASE_URL}/auth/me`, {
+    const response = await fetchWithRetry(`http://localhost:3000/api/auth/me`, {
       method: 'GET',
       credentials: 'include',
       headers: {
@@ -74,72 +199,118 @@ async function checkAuthenticationSilent() {
     if (response.ok) {
       const result = await response.json();
       currentUser = result.user;
+      lastAuthCheck = now;
       updateUserInterface();
       return true;
-    } else {
+    } else if (response.status === 401) {
       if (window.location.pathname !== '/login') {
         window.location.href = '/login';
       }
       return false;
+    } else if (response.status === 429) {
+      console.warn('Rate limited in silent check');
+      return currentUser ? true : false;
     }
   } catch (error) {
-    console.error('Authentication check failed:', error);
+    console.error('Silent authentication check failed:', error);
     if (window.location.pathname !== '/login') {
       window.location.href = '/login';
     }
     return false;
+  } finally {
+    authCheckInProgress = false;
   }
 }
 
-
+// Enhanced login with rate limiting
 async function login(username, password) {
   try {
     showLoading('התחברות למערכת...');
     
-    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+    const response = await fetchWithRetry(`http://localhost:3000/api/auth/login`, {
       method: 'POST',
       credentials: 'include',
       headers: {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({ username, password })
-    });
+    }, 2, 2000); // 2 retries, 2 second initial backoff
 
     const result = await response.json();
     
     if (result.success) {
       currentUser = result.user;
+      lastAuthCheck = Date.now(); // Update cache
+       saveUserSession(currentUser);
       showSuccess('התחברות בוצעה בהצלחה');
-      setTimeout(() => {
-        window.location.href = '/dashboard';
-      }, 1000);
+  await new Promise(resolve => setTimeout(resolve, 1000));
+  window.location.replace('/dashboard');
     } else {
       showError(result.message);
     }
   } catch (error) {
     console.error('Login error:', error);
-    showError('שגיאה בהתחברות למערכת');
+    if (error.message.includes('429')) {
+      showError('יותר מדי ניסיונות התחברות. אנא המתן מספר דקות לפני שתנסה שוב.');
+    } else {
+      showError('שגיאה בהתחברות למערכת');
+    }
   } finally {
-     hideLoading();
+    hideLoading();
+  }
+}
+
+// Fetch with retry logic for 429 errors
+async function fetchWithRetry(url, options, maxRetries = 3, baseDelay = 1000) {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const response = await fetch(url, options);
+      
+      if (response.status === 429 && attempt < maxRetries) {
+        const retryAfter = response.headers.get('Retry-After');
+        const delay = retryAfter ? parseInt(retryAfter) * 1000 : baseDelay * Math.pow(2, attempt);
+        
+        console.warn(`Rate limited. Retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries + 1})`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        continue;
+      }
+      
+      return response;
+    } catch (error) {
+      if (attempt === maxRetries) {
+        throw error;
+      }
+      
+      const delay = baseDelay * Math.pow(2, attempt);
+      console.warn(`Request failed. Retrying in ${delay}ms (attempt ${attempt + 1}/${maxRetries + 1})`);
+      await new Promise(resolve => setTimeout(resolve, delay));
+    }
   }
 }
 
 async function logout() {
-  try {
-    const response = await fetch(`${API_BASE_URL}/auth/logout`, {
-      method: 'POST',
-      credentials: 'include'
-    });
+    try {
+        const response = await fetch(`http://localhost:3000/api/auth/logout`, {
+            method: 'POST',
+            credentials: 'include'
+        });
 
-    if (response.ok) {
-      currentUser = null;
-      window.location.href = '/login';
+        if (response.ok) {
+            currentUser = null;
+            lastAuthCheck = 0;
+            clearUserSession(); // Clear saved session
+            window.location.href = '/login';
+        }
+    } catch (error) {
+        console.error('Logout error:', error);
+        clearUserSession(); // Clear saved session even on error
+        window.location.href = '/login';
     }
-  } catch (error) {
-    console.error('Logout error:', error);
-    window.location.href = '/login';
-  }
 }
+
+
+// [Keep all your other existing functions unchanged]
+
 
 // UI utility functions
 function updateUserInterface() {
@@ -446,7 +617,7 @@ async function exportToExcel(endpoint, filename = 'export.xlsx') {
   try {
     showLoading('מכין קובץ Excel...');
     
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const response = await fetch(`http://localhost:3000/api${endpoint}`, {
       method: 'GET',
       credentials: 'include'
     });
@@ -515,7 +686,7 @@ function createPagination(pagination, onPageChange) {
 // Utility functions for API calls
 async function apiCall(endpoint, options = {}) {
   try {
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+    const response = await fetch(`http://localhost:3000/api${endpoint}`, {
       credentials: 'include',
       headers: {
         'Content-Type': 'application/json',

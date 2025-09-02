@@ -3,7 +3,7 @@
 <head>
     <!-- Production Deployment -->
     <meta name="robots" content="noindex, nofollow">
-    <meta name="description" content="Military Equipment Maintenance Ticket System - IDF">
+    <meta name="description" content="Takzir Maintenance Ticket System - IDF">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/x-icon" href="/favicon.ico">
     <meta charset="UTF-8">
@@ -43,32 +43,33 @@
         </div>
     </div>
 
+    <script src="/js/config.js"></script>
     <script src="/js/app.js"></script>
+    
     <script>
-        async function handleLogin(event) {
-            event.preventDefault();
-            
-            const formData = new FormData(event.target);
-            const username = formData.get('username');
-            const password = formData.get('password');
-            
-            if (!username || !password) {
-                showError('נא למלא את כל השדות');
-                return;
-            }
-            
-            await login(username, password);
+    async function handleLogin(event) {
+        event.preventDefault();
+        
+        const formData = new FormData(event.target);
+        const username = formData.get('username');
+        const password = formData.get('password');
+        
+        if (!username || !password) {
+            showError('נא למלא את כל השדות');
+            return;
         }
         
-        // Check if already logged in
-        checkAuthentication().then(() => {
-            if (currentUser) {
-                window.location.href = '/dashboard';
-            }
-        }).catch(() => {
-            // Not logged in, stay on login page
-        });
-    </script>
+        await login(username, password);
+    }
+    
+    // Only check for existing login on login page
+    // Don't set skipAuthCheck flag - let each page handle its own auth logic
+    if (currentUser) {
+        console.log('User already logged in, redirecting to dashboard');
+        window.location.href = '/dashboard';
+    }
+</script>
+
 
     <style>
         .login-page {

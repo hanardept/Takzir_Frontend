@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <!-- Production Deployment -->
+    <meta name="robots" content="noindex, nofollow">
+    <meta name="description" content="Takzir Maintenance Ticket System - IDF">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="icon" type="image/x-icon" href="/favicon.ico">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>פתיחת תקלה חדשה - מערכת ניהול תקלות</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>פתיחת תקלה חדשה</h1>
+            <p class="subtitle">מערכת ניהול תקלות ציוד צבאי</p>
+        </div>
+        
+        <nav class="nav">
+            <div class="nav-menu">
+                <a href="/dashboard" class="nav-item">לוח בקרה</a>
+                <a href="/tickets" class="nav-item">ניהול תקלות</a>
+                <a href="/users" class="nav-item" id="users-nav" style="display: none;">ניהול משתמשים</a>
+                <a href="/import" class="nav-item" id="import-nav" style="display: none;">ייבוא נתונים</a>
+            </div>
+        </nav>
+        
+        <div class="card">
+            <div class="card-header">
+                <h3>פרטי התקלה</h3>
+            </div>
+            <div class="card-body">
+                <form id="new-ticket-form">
+                    <div class="form-group">
+                        <label for="subject">נושא התקלה:</label>
+                        <input type="text" id="subject" name="subject" class="form-control" required placeholder="נושא קצר לתקלה">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="command">פיקוד:</label>
+                        <select id="command" name="command" class="form-control" required onchange="loadUnitsForCommand(this.value, 'unit')">
+                            <option value="">בחר פיקוד</option>
+                            <option value="פיקוד הצפון">פיקוד הצפון</option>
+                            <option value="פיקוד המרכז">פיקוד המרכז</option>
+                            <option value="פיקוד הדרום">פיקוד הדרום</option>
+                            <option value="פיקוד העורף">פיקוד העורף</option>
+                            <option value="זרוע היבשה">זרוע היבשה</option>
+                            <option value="חיל האוויר">חיל האוויר</option>
+                            <option value="חיל הים">חיל הים</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="unit">יחידה:</label>
+                        <select id="unit" name="unit" class="form-control" required>
+                            <option value="">בחר יחידה</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="description">תיאור מפורט:</label>
+                        <textarea id="description" name="description" class="form-control" rows="5" required placeholder="תאר את התקלה בפירוט..."></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="priority">עדיפות:</label>
+                        <select id="priority" name="priority" class="form-control" required>
+                            <option value="רגילה" selected>רגילה</option>
+                            <option value="דחופה">דחופה</option>
+                            <option value="מבצעית">מבצעית</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label>
+                            <input type="checkbox" id="isRecurring" name="isRecurring">
+                            תקלה חוזרת
+                        </label>
+                    </div>
+                    
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">שלח תקלה</button>
+                        <button type="button" class="btn btn-secondary" onclick="window.location.href='/dashboard'">ביטול</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+        
+        <div id="ticket-success" class="alert alert-success" style="display: none;">
+            <strong>בוצע בהצלחה!</strong> התקלה נוצרה בהצלחה במערכת.
+        </div>
+        <div id="ticket-error" class="alert alert-error" style="display: none;"></div>
+    </div>
+    
+    <!-- Scripts -->
+    <script src="/js/config.js"></script>
+    <script src="/js/app.js"></script>
+    <script src="/js/utils.js"></script>
+    <script src="/js/tickets.js"></script> <!-- Added this for loadUnitsForCommand -->
+    <script src="/js/new-ticket.js"></script>
+</body>
+</html>
