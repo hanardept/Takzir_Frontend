@@ -2,7 +2,19 @@
 // This file contains environment-specific configuration
 
 // API Base URL - will be replaced during build process
-const API_BASE_URL = 'http://localhost:3000/api';
+const hostname = window.location.hostname;
+let API_BASE_URL = '';
+
+if (hostname === 'localhost') {
+  // Local development
+  API_BASE_URL = 'http://localhost:3000/api';
+} else if (hostname.includes('development') || hostname.includes('dev')) {
+  // Development environment (Firebase preview channels)
+  API_BASE_URL = 'https://your-dev-backend.run.app/api';
+} else {
+  // Production environment
+  API_BASE_URL = 'https://your-prod-backend.run.app/api';
+}
 
 // Other configuration constants
 const CONFIG = {
