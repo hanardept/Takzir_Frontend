@@ -10,10 +10,10 @@ if (hostname === 'localhost') {
   API_BASE_URL = 'http://localhost:3000/api';
 } else if (hostname.includes('development') || hostname.includes('dev')) {
   // Development environment (Firebase preview channels)
-  API_BASE_URL = 'https://your-dev-backend.run.app/api';
+  API_BASE_URL = 'https://takzir-backend-dev-5915076344.europe-west4.run.app';
 } else {
   // Production environment
-  API_BASE_URL = 'https://your-prod-backend.run.app/api';
+  API_BASE_URL = 'https://takzir-backend-5915076344.europe-west4.run.app';
 }
 
 // Other configuration constants
