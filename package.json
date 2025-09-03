@@ -6,9 +6,9 @@
   "scripts": {
     "start": "npm run build && node server.js",
     "dev": "npm run build && nodemon server.js",
-
     "build": "node build-script.js && node inject-env.js",
-
+    "build:dev": "cross-env BUILD_ENV=development node build-script.js && node inject-env.js",
+    "build:prod": "cross-env BUILD_ENV=production node build-script.js && node inject-env.js",
     "clean": "rimraf dist || (if exist dist rmdir /s /q dist)",
     "copy-assets": "node build-script.js",
     "optimize": "npm run minify-css && npm run minify-js",
@@ -16,8 +16,8 @@
     "minify-js": "node -e \"console.log('JS minification - add terser if needed')\"",
     "serve": "firebase serve --only hosting",
     "deploy": "npm run build && firebase deploy --only hosting",
-    "deploy:preview": "npm run build && firebase hosting:channel:deploy preview",
-    "build:production": "PRODUCTION_API_URL=https://takzir-backend-5915076344.europe-west4.run.app/api npm run build",
+    "deploy:preview": "firebase hosting:channel:deploy development --expires 30d",
+    "build:production": "cross-env PRODUCTION_API_URL=https://takzir-backend-5915076344.europe-west4.run.app/api npm run build",
     "lint": "echo 'Add ESLint configuration if needed'",
     "test": "echo 'Add tests when ready'",
     "postbuild": "echo 'Build completed! Ready for deployment.'"
