@@ -686,7 +686,7 @@ function createPagination(pagination, onPageChange) {
 // Utility functions for API calls
 async function apiCall(endpoint, options = {}) {
   const url = `${window.API_BASE_URL}${endpoint}`;
-  try {
+ // try {
     const response = await fetch(`http://localhost:3000/api${endpoint}`, {
       credentials: 'include',
       headers: {
@@ -703,10 +703,10 @@ async function apiCall(endpoint, options = {}) {
     }
     
     return result;
-  } catch (error) {
+ // } catch (error) {
     console.error(`API call error for ${endpoint}:`, error);
     throw error;
-  }
+ // }
 }
 
 // Debounce function for search inputs
