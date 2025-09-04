@@ -114,7 +114,7 @@ async function checkAuthentication() {
             showLoading('בודק הרשאות...');
         }
         
-        const response = await fetch(`http://localhost:3000/api/auth/me`, {
+        const response = await fetch(`${API_BASE_URL}/auth/me`, {
             method: 'GET',
             credentials: 'include',
             headers: {
@@ -188,7 +188,7 @@ async function checkAuthenticationSilent() {
   authCheckInProgress = true;
 
   try {
-    const response = await fetchWithRetry(`http://localhost:3000/api/auth/me`, {
+    const response = await fetchWithRetry(`${API_BASE_URL}/auth/me`, {
       method: 'GET',
       credentials: 'include',
       headers: {
@@ -224,11 +224,10 @@ async function checkAuthenticationSilent() {
 
 // Enhanced login with rate limiting
 async function login(username, password) {
-  const url = `${window.API_BASE_URL}${endpoint}`;
   try {
     showLoading('התחברות למערכת...');
     
-    const response = await fetchWithRetry(`http://localhost:3000/api/auth/login`, {
+    const response = await fetchWithRetry(`${API_BASE_URL}/auth/login`, {
       method: 'POST',
       credentials: 'include',
       headers: {
@@ -291,7 +290,7 @@ async function fetchWithRetry(url, options, maxRetries = 3, baseDelay = 1000) {
 
 async function logout() {
     try {
-        const response = await fetch(`http://localhost:3000/api/auth/logout`, {
+        const response = await fetch(`${API_BASE_URL}/auth/logout`, {
             method: 'POST',
             credentials: 'include'
         });
@@ -618,7 +617,7 @@ async function exportToExcel(endpoint, filename = 'export.xlsx') {
   try {
     showLoading('מכין קובץ Excel...');
     
-    const response = await fetch(`http://localhost:3000/api${endpoint}`, {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       method: 'GET',
       credentials: 'include'
     });
@@ -686,9 +685,8 @@ function createPagination(pagination, onPageChange) {
 
 // Utility functions for API calls
 async function apiCall(endpoint, options = {}) {
-  const url = `${window.API_BASE_URL}${endpoint}`;
   try {
-    const response = await fetch(`http://localhost:3000/api${endpoint}`, {
+    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
       credentials: 'include',
       headers: {
         'Content-Type': 'application/json',
