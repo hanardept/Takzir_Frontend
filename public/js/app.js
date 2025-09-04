@@ -685,6 +685,7 @@ function createPagination(pagination, onPageChange) {
 
 // Utility functions for API calls
 async function apiCall(endpoint, options = {}) {
+  const url = `${window.API_BASE_URL}${endpoint}`;
   try {
     const response = await fetch(`http://localhost:3000/api${endpoint}`, {
       credentials: 'include',
