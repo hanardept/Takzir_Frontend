@@ -70,7 +70,7 @@
                         </thead>
                         <tbody id="tickets-table-body">
                             <tr>
-                                <td colspan="9" class="text-center">
+                                <td colspan="10" class="text-center">
                                     <div class="loading">
                                         <div class="spinner"></div>
                                         <p>טוען תקלות...</p>
@@ -99,13 +99,123 @@
     <script src="/js/tickets.js"></script>
     <script src="/js/utils.js"></script>
     
-    
+<!-- Replace the entire <script> section in your tickets.html with this corrected version -->
 <script>
     // Global variables for pagination and filtering
     let currentPage = 1;
     let currentFilters = {};
 
-    // Load tickets function - THE MISSING FUNCTION
+    // Load current user on page load
+    async function loadCurrentUser() {
+        try {
+            const response = await fetch(`${window.API_BASE_URL}/auth/me`, {
+                method: 'GET',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            if (response.ok) {
+                const result = await response.json();
+                if (result.success) {
+                    currentUser = result.user;
+                    console.log('Current user loaded:', currentUser);
+                    updateNavigationForRole();
+                    return currentUser;
+                }
+            }
+            throw new Error('Failed to load user');
+        } catch (error) {
+            console.error('Error loading current user:', error);
+            window.location.href = '/login.html';
+            return null;
+        }
+    }
+
+    // Update navigation based on user role
+    function updateNavigationForRole() {
+        if (!currentUser) return;
+        
+        const createTicketBtn = document.getElementById('create-ticket-btn');
+        const navUsers = document.getElementById('nav-users');
+        const importNav = document.getElementById('import-nav');
+        
+        if (createTicketBtn) {
+            if (currentUser.role === 'admin' || currentUser.role === 'technician') {
+                createTicketBtn.style.display = 'inline-block';
+            } else {
+                createTicketBtn.style.display = 'none';
+            }
+        }
+        
+        if (navUsers && currentUser.role !== 'admin') {
+            navUsers.style.display = 'none';
+        }
+        
+        if (importNav && currentUser.role === 'admin') {
+            importNav.style.display = 'inline-block';
+        }
+    }
+
+    // Format date helper
+    function formatDate(dateString) {
+        if (!dateString) return '';
+        try {
+            return new Date(dateString).toLocaleDateString('he-IL');
+        } catch {
+            return dateString;
+        }
+    }
+
+    // Render tickets in table
+    function renderTickets(tickets) {
+        const tableBody = document.getElementById('tickets-table-body');
+        
+        if (!tickets || tickets.length === 0) {
+            tableBody.innerHTML = `
+                <tr>
+                    <td colspan="10" class="text-center">אין תקלות להצגה</td>
+                </tr>
+            `;
+            return;
+        }
+
+        tableBody.innerHTML = tickets.map(ticket => `
+            <tr>
+                <td>${ticket.ticketNumber || ''}</td>
+                <td>${ticket.subject || '-'}</td>
+                <td>${ticket.command || ''}</td>
+                <td>${ticket.unit || ''}</td>
+                <td><span class="priority-${(ticket.priority || '').toLowerCase()}">${ticket.priority || ''}</span></td>
+                <td><span class="status-${(ticket.status || '').toLowerCase()}">${ticket.status || ''}</span></td>
+                <td>${ticket.isRecurring ? 'כן' : 'לא'}</td>
+                <td class="ticket-description" title="${ticket.description || ''}">${ticket.description || ''}</td>
+                <td>${formatDate(ticket.openDate)}</td>
+                <td class="ticket-actions">
+                    <button class="btn btn-sm btn-info" onclick="viewTicket('${ticket._id}')">צפייה</button>
+                    ${(currentUser?.role === 'admin' || currentUser?.role === 'technician') ? 
+                        `<button class="btn btn-sm btn-warning" onclick="editTicket('${ticket._id}')">עריכה</button>` : ''}
+                </td>
+            </tr>
+        `).join('');
+    }
+        
+    // Show error in tickets table
+    function showTicketsError(message) {
+        const tableBody = document.getElementById('tickets-table-body');
+        tableBody.innerHTML = `
+            <tr>
+                <td colspan="10" class="text-center" style="color: #ef4444;">
+                    ${message}
+                    <br><br>
+                    <button class="btn btn-info" onclick="loadTickets()">נסה שוב</button>
+                </td>
+            </tr>
+        `;
+    }
+
+    // Load tickets function (from your tickets.js)
     async function loadTickets(page = 1, filters = {}) {
         try {
             console.log('🔄 Loading tickets...', { page, filters });
@@ -114,7 +224,7 @@
             const tableBody = document.getElementById('tickets-table-body');
             tableBody.innerHTML = `
                 <tr>
-                    <td colspan="9" class="text-center">
+                    <td colspan="10" class="text-center">
                         <div class="loading">
                             <div class="spinner"></div>
                             <p>טוען תקלות...</p>
@@ -164,65 +274,8 @@
             }
 
         } catch (error) {
-            console.error('❌ Error loading tickets:', error);
+            console.error('⌐ Error loading tickets:', error);
             showTicketsError('שגיאה בטעינת התקלות: ' + error.message);
-        }
-    }
-
-    // Render tickets in table
-    function renderTickets(tickets) {
-        const tableBody = document.getElementById('tickets-table-body');
-        
-        if (!tickets || tickets.length === 0) {
-            tableBody.innerHTML = `
-                <tr>
-                    <td colspan="9" class="text-center">אין תקלות להצגה</td>
-                </tr>
-            `;
-            return;
-        }
-
-        tableBody.innerHTML = tickets.map(ticket => `
-            <tr>
-                <td>${ticket.ticketNumber || ''}</td>
-                <td>${ticket.subject || '-'}</td>
-                <td>${ticket.command || ''}</td>
-                <td>${ticket.unit || ''}</td>
-                <td><span class="priority-${(ticket.priority || '').toLowerCase()}">${ticket.priority || ''}</span></td>
-                <td><span class="status-${(ticket.status || '').toLowerCase()}">${ticket.status || ''}</span></td>
-                <td>${ticket.isRecurring ? 'כן' : 'לא'}</td>
-                <td class="ticket-description" title="${ticket.description || ''}">${ticket.description || ''}</td>
-                <td>${formatDate(ticket.openDate)}</td>
-                <td class="ticket-actions">
-                    <button class="btn btn-sm btn-info" onclick="viewTicket('${ticket._id}')">צפייה</button>
-                    ${(currentUser?.role === 'admin' || currentUser?.role === 'technician') ? 
-                        `<button class="btn btn-sm btn-warning" onclick="editTicket('${ticket._id}')">עריכה</button>` : ''}
-                </td>
-            </tr>
-        `).join('');
-    }
-
-    // Show error in tickets table
-    function showTicketsError(message) {
-        const tableBody = document.getElementById('tickets-table-body');
-        tableBody.innerHTML = `
-            <tr>
-                <td colspan="9" class="text-center" style="color: #ef4444;">
-                    ${message}
-                    <br><br>
-                    <button class="btn btn-info" onclick="loadTickets()">נסה שוב</button>
-                </td>
-            </tr>
-        `;
-    }
-
-    // Format date helper
-    function formatDate(dateString) {
-        if (!dateString) return '';
-        try {
-            return new Date(dateString).toLocaleDateString('he-IL');
-        } catch {
-            return dateString;
         }
     }
 
@@ -232,12 +285,468 @@
         loadTickets(currentPage, currentFilters);
     }
 
-    // Handle URL parameters for specific actions
-    document.addEventListener('DOMContentLoaded', () => {
-        // Load tickets automatically when page loads
-        loadTickets();
+    // VIEW TICKET FUNCTION
+    async function viewTicket(ticketId) {
+        try {
+            console.log('Viewing ticket:', ticketId);
+            
+            const response = await fetch(`${window.API_BASE_URL}/tickets/${ticketId}`, {
+                method: 'GET',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const result = await response.json();
+            if (!result.success) {
+                throw new Error(result.message || 'Failed to load ticket');
+            }
+            
+            const ticket = result.data;
+            createViewTicketModal(ticket);
+            
+        } catch (error) {
+            console.error('Error viewing ticket:', error);
+            alert('שגיאה בטעינת פרטי התקלה: ' + error.message);
+        }
+    }
 
-        // Handle URL parameters
+    // EDIT TICKET FUNCTION - Enhanced with role checking
+    async function editTicket(ticketId) {
+        try {
+            // Check permissions first
+            if (!currentUser || (currentUser.role !== 'admin' && currentUser.role !== 'technician')) {
+                alert('אין הרשאה לעריכת תקלות');
+                return;
+            }
+            
+            console.log('Loading ticket for edit:', ticketId);
+            
+            const response = await fetch(`${window.API_BASE_URL}/tickets/${ticketId}`, {
+                method: 'GET',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const result = await response.json();
+            if (!result.success) {
+                throw new Error(result.message || 'Failed to load ticket');
+            }
+            
+            const ticket = result.data;
+            createEditTicketModal(ticket);
+            
+        } catch (error) {
+            console.error('Error loading ticket for edit:', error);
+            alert('שגיאה בטעינת התקלה לעריכה: ' + error.message);
+        }
+    }
+
+    // Modal show/hide functions
+    function showModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.style.display = 'flex';
+            modal.style.justifyContent = 'center';
+            modal.style.alignItems = 'center';
+            modal.classList.add('show');
+            document.body.style.overflow = 'hidden';
+        }
+    }
+
+    function hideModal(modalId) {
+        const modal = document.getElementById(modalId);
+        if (modal) {
+            modal.style.display = 'none';
+            modal.classList.remove('show');
+            document.body.style.overflow = 'auto';
+            if (modal.parentNode) {
+                modal.remove();
+            }
+        }
+    }
+
+    // CREATE VIEW MODAL - Enhanced version
+    function createViewTicketModal(ticket) {
+        const existingModal = document.getElementById('view-ticket-modal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        const modal = document.createElement('div');
+        modal.id = 'view-ticket-modal';
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title">פרטי תקלה #${ticket.ticketNumber}</h2>
+                    <span class="close" onclick="hideModal('view-ticket-modal')">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <div class="ticket-details">
+                        <div class="detail-row">
+                            <label>מספר תקלה:</label>
+                            <span>${ticket.ticketNumber || ''}</span>
+                        </div>
+                        <div class="detail-row">
+                            <label>נושא התקלה:</label>
+                            <span>${ticket.subject || 'לא צוין'}</span>
+                        </div>
+                        <div class="detail-row">
+                            <label>פיקוד:</label>
+                            <span>${ticket.command || ''}</span>
+                        </div>
+                        <div class="detail-row">
+                            <label>יחידה:</label>
+                            <span>${ticket.unit || ''}</span>
+                        </div>
+                        <div class="detail-row">
+                            <label>עדיפות:</label>
+                            <span class="priority-${(ticket.priority || '').toLowerCase()}">${ticket.priority || ''}</span>
+                        </div>
+                        <div class="detail-row">
+                            <label>סטטוס:</label>
+                            <span class="status-${(ticket.status || '').toLowerCase()}">${ticket.status || ''}</span>
+                        </div>
+                        <div class="detail-row">
+                            <label>תקלה חוזרת:</label>
+                            <span>${ticket.isRecurring ? 'כן' : 'לא'}</span>
+                        </div>
+                        <div class="detail-row">
+                            <label>תאריך פתיחה:</label>
+                            <span>${formatDate(ticket.openDate)}</span>
+                        </div>
+                        ${ticket.closeDate ? `
+                        <div class="detail-row">
+                            <label>תאריך סגירה:</label>
+                            <span>${formatDate(ticket.closeDate)}</span>
+                        </div>
+                        ` : ''}
+                        ${ticket.assignedTechnician ? `
+                        <div class="detail-row">
+                            <label>טכנאי מטפל:</label>
+                            <span>${ticket.assignedTechnician}</span>
+                        </div>
+                        ` : ''}
+                        <div class="detail-row">
+                            <label>נוצר על ידי:</label>
+                            <span>${ticket.createdBy || ''}</span>
+                        </div>
+                        ${ticket.lastModifiedBy ? `
+                        <div class="detail-row">
+                            <label>עודכן לאחרונה על ידי:</label>
+                            <span>${ticket.lastModifiedBy}</span>
+                        </div>
+                        ` : ''}
+                    </div>
+                    
+                    <div class="ticket-description-full">
+                        <h3>תיאור התקלה</h3>
+                        <p>${ticket.description || ''}</p>
+                    </div>
+                    
+                    ${ticket.comments && ticket.comments.length > 0 ? `
+                    <div class="ticket-comments">
+                        <h3>הערות (${ticket.comments.length})</h3>
+                        <div class="comments-list">
+                            ${ticket.comments.map(comment => `
+                                <div class="comment">
+                                    <div class="comment-header">
+                                        <strong>${comment.author}</strong>
+                                        <span class="comment-date">${formatDate(comment.createdAt)}</span>
+                                    </div>
+                                    <div class="comment-content">${comment.content}</div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    ` : ''}
+                    
+                    <div class="ticket-actions-modal">
+                        ${(currentUser?.role === 'admin' || currentUser?.role === 'technician') ? 
+                            `<button class="btn btn-warning" onclick="editTicket('${ticket._id}')">עריכת תקלה</button>` : ''}
+                        <button class="btn btn-secondary" onclick="hideModal('view-ticket-modal')">סגירה</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+        showModal('view-ticket-modal');
+    }
+
+    // COMPLETE EDIT MODAL IMPLEMENTATION
+    function createEditTicketModal(ticket) {
+        // Remove existing modal if any
+        const existingModal = document.getElementById('edit-ticket-modal');
+        if (existingModal) {
+            existingModal.remove();
+        }
+
+        const modal = document.createElement('div');
+        modal.id = 'edit-ticket-modal';
+        modal.className = 'modal';
+        modal.innerHTML = `
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h2 class="modal-title">עריכת תקלה #${ticket.ticketNumber}</h2>
+                    <span class="close" onclick="hideModal('edit-ticket-modal')">&times;</span>
+                </div>
+                <div class="modal-body">
+                    <form id="edit-ticket-form" onsubmit="handleEditTicket(event, '${ticket._id}')">
+                        <div class="form-group">
+                            <label for="edit-ticket-subject">נושא התקלה *</label>
+                            <input type="text" id="edit-ticket-subject" name="subject" class="form-control" 
+                                   value="${ticket.subject || ''}" required placeholder="נושא קצר לתקלה">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="edit-ticket-command">פיקוד *</label>
+                            <select id="edit-ticket-command" name="command" class="form-control" required 
+                                    onchange="loadUnitsForCommand(this.value, 'edit-ticket-unit')">
+                                <option value="">בחר פיקוד</option>
+                                <option value="פיקוד הצפון" ${ticket.command === 'פיקוד הצפון' ? 'selected' : ''}>פיקוד הצפון</option>
+                                <option value="פיקוד המרכז" ${ticket.command === 'פיקוד המרכז' ? 'selected' : ''}>פיקוד המרכז</option>
+                                <option value="פיקוד הדרום" ${ticket.command === 'פיקוד הדרום' ? 'selected' : ''}>פיקוד הדרום</option>
+                                <option value="פיקוד העורף" ${ticket.command === 'פיקוד העורף' ? 'selected' : ''}>פיקוד העורף</option>
+                                <option value="זרוע היבשה" ${ticket.command === 'זרוע היבשה' ? 'selected' : ''}>זרוע היבשה</option>
+                                <option value="חיל האוויר" ${ticket.command === 'חיל האוויר' ? 'selected' : ''}>חיל האוויר</option>
+                                <option value="חיל הים" ${ticket.command === 'חיל הים' ? 'selected' : ''}>חיל הים</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="edit-ticket-unit">יחידה *</label>
+                            <select id="edit-ticket-unit" name="unit" class="form-control" required>
+                                <option value="">בחר יחידה</option>
+                                <option value="${ticket.unit}" selected>${ticket.unit}</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="edit-ticket-priority">עדיפות *</label>
+                            <select id="edit-ticket-priority" name="priority" class="form-control" required>
+                                <option value="רגילה" ${ticket.priority === 'רגילה' ? 'selected' : ''}>רגילה</option>
+                                <option value="דחופה" ${ticket.priority === 'דחופה' ? 'selected' : ''}>דחופה</option>
+                                <option value="מבצעית" ${ticket.priority === 'מבצעית' ? 'selected' : ''}>מבצעית</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="edit-ticket-status">סטטוס *</label>
+                            <select id="edit-ticket-status" name="status" class="form-control" required>
+                                <option value="פתוח" ${ticket.status === 'פתוח' ? 'selected' : ''}>פתוח</option>
+                                <option value="בטיפול" ${ticket.status === 'בטיפול' ? 'selected' : ''}>בטיפול</option>
+                                <option value="תוקן" ${ticket.status === 'תוקן' ? 'selected' : ''}>תוקן</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="edit-ticket-assigned">טכנאי מטפל</label>
+                            <input type="text" id="edit-ticket-assigned" name="assignedTechnician" class="form-control" 
+                                   value="${ticket.assignedTechnician || ''}" placeholder="שם הטכנאי המטפל">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="edit-ticket-description">תיאור התקלה *</label>
+                            <textarea id="edit-ticket-description" name="description" class="form-control" rows="4" required 
+                                      placeholder="תאר את התקלה בפירוט...">${ticket.description || ''}</textarea>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label>
+                                <input type="checkbox" id="edit-ticket-recurring" name="isRecurring" 
+                                       ${ticket.isRecurring ? 'checked' : ''}>
+                                תקלה חוזרת
+                            </label>
+                        </div>
+                        
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary">שמירת שינויים</button>
+                            <button type="button" class="btn btn-secondary" onclick="hideModal('edit-ticket-modal')">ביטול</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+        
+        // Load units for the current command
+        setTimeout(() => {
+            loadUnitsForCommand(ticket.command, 'edit-ticket-unit');
+            // Ensure the current unit stays selected
+            setTimeout(() => {
+                const unitSelect = document.getElementById('edit-ticket-unit');
+                if (unitSelect) {
+                    unitSelect.value = ticket.unit;
+                }
+            }, 200);
+        }, 100);
+        
+        showModal('edit-ticket-modal');
+    }
+
+    // HANDLE EDIT TICKET FORM SUBMISSION
+    async function handleEditTicket(event, ticketId) {
+        event.preventDefault();
+        
+        try {
+            const formData = new FormData(event.target);
+            const ticketData = {
+                subject: formData.get('subject'),
+                command: formData.get('command'),
+                unit: formData.get('unit'),
+                priority: formData.get('priority'),
+                status: formData.get('status'),
+                assignedTechnician: formData.get('assignedTechnician'),
+                description: formData.get('description'),
+                isRecurring: formData.get('isRecurring') === 'on'
+            };
+            
+            console.log('Updating ticket:', ticketId, ticketData);
+            
+            // Show loading state
+            const submitBtn = event.target.querySelector('button[type="submit"]');
+            const originalText = submitBtn.textContent;
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'שומר...';
+            
+            const response = await fetch(`${window.API_BASE_URL}/tickets/${ticketId}`, {
+                method: 'PUT',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(ticketData)
+            });
+            
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+            }
+            
+            const result = await response.json();
+            if (!result.success) {
+                throw new Error(result.message || 'Failed to update ticket');
+            }
+            
+            console.log('Ticket updated successfully:', result.data);
+            
+            // Show success message
+            alert('תקלה עודכנה בהצלחה');
+            
+            hideModal('edit-ticket-modal');
+            
+            // Refresh the tickets list
+            refreshTickets();
+            
+        } catch (error) {
+            console.error('Error updating ticket:', error);
+            alert('שגיאה בעדכון התקלה: ' + error.message);
+        } finally {
+            // Reset button state
+            const submitBtn = event.target.querySelector('button[type="submit"]');
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'שמירת שינויים';
+            }
+        }
+    }
+
+    // LOAD UNITS FOR COMMAND (dropdown population)
+    function loadUnitsForCommand(command, targetSelectId) {
+        const unitSelect = document.getElementById(targetSelectId);
+        if (!unitSelect) {
+            console.error('Unit select element not found:', targetSelectId);
+            return;
+        }
+
+        // Clear existing options
+        unitSelect.innerHTML = '<option value="">בחר יחידה...</option>';
+
+        if (!command) {
+            return;
+        }
+
+        // Predefined units based on command
+        const predefinedUnits = {
+            'פיקוד הצפון': ['אוגדה 36', 'אוגדה 91', 'חטיבה 300', 'חטיבה 769', 'יחידת סער', 'מחוז צפון'],
+            'פיקוד המרכז': ['אוגדה 877', 'חטיבה 890', 'חטיבה 11', 'מחוז מרכז', 'יחידת דוכיפת'],
+            'פיקוד הדרום': ['אוגדה 80', 'אוגדה 143', 'חטיבה 12', 'חטיבה 414', 'מחוז דרום'],
+            'פיקוד העורף': ['פיקוד העורף מחוז צפון', 'פיקוד העורף מחוז מרכז', 'פיקוד העורף מחוז דרום'],
+            'זרוע היבשה': ['בה״ד 1', 'בסיס צאלים', 'מחנה שיזפון', 'מחנה אדם'],
+            'חיל האוויר': ['בסיס חצרים', 'בסיס רמת דוד', 'בסיס נבטים', 'בסיס תל נוף'],
+            'חיל הים': ['בסיס חיפה', 'בסיס אילת', 'בסיס אשדוד', 'יחידת שייטת']
+        };
+
+        const units = predefinedUnits[command] || [];
+        
+        units.forEach(unit => {
+            const option = document.createElement('option');
+            option.value = unit;
+            option.textContent = unit;
+            unitSelect.appendChild(option);
+        });
+
+        if (units.length === 0) {
+            unitSelect.innerHTML = '<option value="">אין יחידות זמינות</option>';
+        }
+    }
+
+    // Placeholder functions
+    function renderPagination(pagination) {
+        console.log('Pagination:', pagination);
+        // TODO: Implement pagination rendering
+    }
+
+    function showCreateTicketForm() {
+        console.log('Show create ticket form');
+        // TODO: Implement create ticket form
+    }
+
+    // Close modals when clicking outside
+    window.addEventListener('click', function(event) {
+        if (event.target.classList.contains('modal')) {
+            const modalId = event.target.id;
+            hideModal(modalId);
+        }
+    });
+
+    // Close modals with Escape key
+    document.addEventListener('keydown', function(event) {
+        if (event.key === 'Escape') {
+            const modals = ['view-ticket-modal', 'edit-ticket-modal'];
+            modals.forEach(modalId => {
+                const modal = document.getElementById(modalId);
+                if (modal && modal.style.display === 'flex') {
+                    hideModal(modalId);
+                }
+            });
+        }
+    });
+
+    // Initialize when DOM is ready
+    document.addEventListener('DOMContentLoaded', async () => {
+        console.log('DOM loaded, initializing tickets page...');
+        
+        // Load current user first
+        await loadCurrentUser();
+        
+        // Then load tickets
+        loadTickets();
+        
+        // Handle URL parameters for specific actions
         const urlParams = new URLSearchParams(window.location.search);
         const action = urlParams.get('action');
         const viewTicketId = urlParams.get('view');
@@ -251,26 +760,6 @@
         }
     });
 
-    // Placeholder functions (implement these if needed)
-    function renderPagination(pagination) {
-        console.log('Pagination:', pagination);
-        // TODO: Implement pagination rendering
-    }
-
-    function viewTicket(ticketId) {
-        console.log('View ticket:', ticketId);
-        // TODO: Implement ticket viewing
-    }
-
-    function editTicket(ticketId) {
-        console.log('Edit ticket:', ticketId);
-        // TODO: Implement ticket editing
-    }
-
-    function showCreateTicketForm() {
-        console.log('Show create ticket form');
-        // TODO: Implement create ticket form
-    }
 </script>
 
 
@@ -416,6 +905,417 @@
                 flex-direction: column;
             }
         }
-    </style>
+   /* Add this CSS to your existing styles in tickets.html */
+
+/* Modal Base Styles */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+    overflow-y: auto;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+.modal.show {
+    display: flex !important;
+    justify-content: center;
+    align-items: flex-start;
+    padding-top: 20px;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    width: 100%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+    margin: auto;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    border-bottom: 1px solid #dee2e6;
+    background: #f8f9fa;
+    border-radius: 12px 12px 0 0;
+}
+
+.modal-title {
+    margin: 0;
+    color: #495057;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.close {
+    background: none;
+    border: none;
+    font-size: 2rem;
+    color: #6c757d;
+    cursor: pointer;
+    padding: 0;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    transition: all 0.2s ease;
+}
+
+.close:hover {
+    background: #e9ecef;
+    color: #495057;
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+/* Form Styles */
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #495057;
+    font-size: 0.9rem;
+}
+
+.form-control {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ced4da;
+    border-radius: 8px;
+    font-size: 1rem;
+    background: white;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    box-sizing: border-box;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+/* Checkbox styling */
+.form-group label input[type="checkbox"] {
+    margin-left: 8px;
+    transform: scale(1.2);
+}
+
+/* Priority and Status styling */
+.priority-רגילה, .priority-רגילה {
+    background: #28a745;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+}
+
+.priority-דחופה {
+    background: #ffc107;
+    color: #212529;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+}
+
+.priority-מבצעית {
+    background: #dc3545;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+}
+
+.status-פתוח {
+    background: #007bff;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+}
+
+.status-בטיפול {
+    background: #ffc107;
+    color: #212529;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+}
+
+.status-תוקן {
+    background: #28a745;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8rem;
+}
+
+/* Comment styles */
+.comment {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 12px;
+}
+
+.comment-header {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 0.9rem;
+}
+
+.comment-header strong {
+    color: #495057;
+}
+
+.comment-date {
+    color: #6c757d;
+    font-size: 0.8rem;
+}
+
+.comment-content {
+    color: #333;
+    line-height: 1.4;
+    font-size: 0.9rem;
+}
+
+/* Mobile Responsive Styles */
+@media (max-width: 768px) {
+    .modal {
+        padding: 10px;
+    }
+    
+    .modal-content {
+        width: 100%;
+        max-width: none;
+        margin: 0;
+        border-radius: 8px;
+        max-height: 95vh;
+    }
+    
+    .modal-header {
+        padding: 15px;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 10px;
+    }
+    
+    .close {
+        position: absolute;
+        top: 15px;
+        left: 15px;
+        font-size: 1.5rem;
+        width: 35px;
+        height: 35px;
+    }
+    
+    .modal-title {
+        font-size: 1.1rem;
+        padding-left: 45px;
+        width: 100%;
+    }
+    
+    .modal-body {
+        padding: 15px;
+    }
+    
+    .form-control {
+        padding: 10px;
+        font-size: 16px; /* Prevents zoom on iOS */
+    }
+    
+    .form-group {
+        margin-bottom: 15px;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .form-actions .btn {
+        width: 100%;
+        padding: 12px;
+        font-size: 1rem;
+    }
+    
+    .ticket-details {
+        grid-template-columns: 1fr;
+    }
+    
+    .detail-row {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
+        padding: 10px 0;
+    }
+    
+    .detail-row label {
+        font-size: 0.85rem;
+        color: #6c757d;
+    }
+    
+    .comment-header {
+        flex-direction: column;
+        gap: 2px;
+    }
+    
+    .ticket-actions {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .ticket-actions .btn {
+        width: 100%;
+        text-align: center;
+    }
+    
+    .ticket-actions-modal {
+        flex-direction: column;
+        gap: 10px;
+    }
+    
+    .ticket-actions-modal .btn {
+        width: 100%;
+        padding: 12px;
+    }
+}
+
+@media (max-width: 480px) {
+    .modal {
+        padding: 5px;
+    }
+    
+    .modal-content {
+        border-radius: 0;
+        max-height: 100vh;
+    }
+    
+    .modal-header {
+        padding: 12px;
+    }
+    
+    .modal-body {
+        padding: 12px;
+    }
+    
+    .close {
+        top: 12px;
+        left: 12px;
+    }
+    
+    .modal-title {
+        font-size: 1rem;
+        padding-left: 40px;
+    }
+    
+    .form-control {
+        padding: 8px;
+    }
+    
+    .detail-row {
+        padding: 8px 0;
+    }
+}
+
+/* Loading and Error States */
+.loading {
+    text-align: center;
+    padding: 20px;
+    color: #6c757d;
+}
+
+.spinner {
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #007bff;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 10px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Button Styles */
+.btn {
+    display: inline-block;
+    padding: 8px 16px;
+    margin: 2px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    text-decoration: none;
+    text-align: center;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+}
+
+.btn-primary {
+    background: #007bff;
+    color: white;
+}
+
+.btn-primary:hover {
+    background: #0056b3;
+}
+
+.btn-warning {
+    background: #ffc107;
+    color: #212529;
+}
+
+.btn-warning:hover {
+    background: #e0a800;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #545b62;
+}
+
+.btn-info {
+    background: #17a2b8;
+    color: white;
+}
+
+.btn-info:hover {
+    background: #117a8b;
+}
+
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 0.8rem;
+}
+   </style>
 </body>
 </html>
