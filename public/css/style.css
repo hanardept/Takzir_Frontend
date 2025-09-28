@@ -889,7 +889,9 @@ body {
   }
   
   /* Fix all text elements in dark mode */
-  .container *:not(.btn):not(.status-badge):not(.priority-low):not(.priority-urgent):not(.priority-critical):not(.status-open):not(.status-in-progress):not(.status-closed) {
+  .container *:not(.btn):not(.status-badge):not(.priority-low):not(.priority-urgent):not(.priority-critical):not(.status-open):not(.status-in-progress):not(.status-closed):not(.form-control):not(option) {
+
+
     color: #ecf0f1 !important;
   }
   
@@ -1267,6 +1269,7 @@ body {
     color: #2c3e50 !important;
     background: #ffffff !important;
     border-radius: 8px;
+    color: #2c3e50;
 }
 
 .form-control:focus {
