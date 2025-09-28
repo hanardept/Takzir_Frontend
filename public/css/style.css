@@ -220,7 +220,7 @@ body {
 }
 
 .table tbody tr:nth-child(even) {
-  background: #fafafa;
+  background: #41505f;
 }
 
 /* Status badges */
@@ -416,26 +416,33 @@ body {
   top: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
-  animation: fadeIn 0.3s ease;
+  background-color: rgba(0, 0, 0, 0.8) !important;
+  backdrop-filter: blur(2px);
+  animation: fadeIn 0.3s ease-in-out;
 }
 
 .modal.show {
-  display: flex;
-  justify-content: center;
+  display: flex !important;
   align-items: center;
+  justify-content: center;
+  padding: 10px;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 .modal-content {
-  background: white;
-  border-radius: 12px;
-  padding: 30px;
-  max-width: 600px;
-  width: 90%;
-  max-height: 80vh;
-  overflow-y: auto;
-  animation: slideIn 0.3s ease;
-  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+    background-color: #ffffff !important;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5) !important;
+    width: 100%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+    animation: slideIn 0.3s ease-out;
 }
 
 @keyframes fadeIn {
@@ -449,28 +456,45 @@ body {
 }
 
 .modal-header {
-  border-bottom: 1px solid #dee2e6;
-  padding-bottom: 15px;
-  margin-bottom: 20px;
+  background: linear-gradient(135deg, #2c3e50, #34495e) !important;
+  color: #ffffff !important;
+  padding: 20px;
+  border-radius: 12px 12px 0 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 3px solid #3498db !important;
+  margin-bottom: 0;
 }
 
 .modal-title {
   font-size: 1.5rem;
-  font-weight: 700;
-  color: #333;
+  font-weight: 700 !important;
+  color: #ffffff !important;
+  margin: 0;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
 }
 
 .close {
-  float: left;
+  background: rgba(255, 255, 255, 0.2) !important;
+  border: none;
+  color: #ffffff !important;
   font-size: 2rem;
   font-weight: bold;
   cursor: pointer;
-  color: #999;
-  transition: color 0.2s ease;
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  display: flex !important;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  float: none;
 }
 
 .close:hover {
-  color: #333;
+  background: rgba(255, 255, 255, 0.3) !important;
+  color: #ffffff !important;
 }
 
 /* User info */
@@ -865,7 +889,9 @@ body {
   }
   
   /* Fix all text elements in dark mode */
-  .container *:not(.btn):not(.status-badge):not(.priority-low):not(.priority-urgent):not(.priority-critical):not(.status-open):not(.status-in-progress):not(.status-closed) {
+  .container *:not(.btn):not(.status-badge):not(.priority-low):not(.priority-urgent):not(.priority-critical):not(.status-open):not(.status-in-progress):not(.status-closed):not(.form-control):not(option) {
+
+
     color: #ecf0f1 !important;
   }
   
@@ -1119,3 +1145,134 @@ body {
 
 .w-100 { width: 100%; }
 .h-100 { height: 100%; }
+
+/* Modal Body Fixes */
+.modal-body {
+    background: #ffffff !important;
+    color: #2c3e50 !important;
+    padding: 25px !important;
+}
+
+/* Detail Row Styling */
+.detail-row {
+    background: #f8fafc !important;
+    border: 1px solid #e1e8ed !important;
+    border-left: 4px solid #3498db !important;
+    margin-bottom: 12px;
+    padding: 15px !important;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+}
+
+.detail-row label {
+    color: #2c3e50 !important;
+    font-weight: 700 !important;
+    font-size: 0.9rem;
+    margin-bottom: 8px !important;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.detail-row span {
+    color: #34495e !important;
+    font-weight: 600 !important;
+    font-size: 1.1rem;
+}
+
+/* Enhanced priority and status visibility */
+.priority-רגילה, .priority-רגילה span {
+    background: #27ae60 !important;
+    color: #ffffff !important;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-weight: 600 !important;
+}
+
+.priority-דחופה, .priority-דחופה span {
+    background: #f39c12 !important;
+    color: #ffffff !important;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-weight: 600 !important;
+}
+
+.priority-מבצעית, .priority-מבצעית span {
+    background: #e74c3c !important;
+    color: #ffffff !important;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-weight: 600 !important;
+}
+
+.status-פתוח, .status-פתוח span {
+    background: #e74c3c !important;
+    color: #ffffff !important;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-weight: 600 !important;
+}
+
+.status-בטיפול, .status-בטיפול span {
+    background: #f39c12 !important;
+    color: #ffffff !important;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-weight: 600 !important;
+}
+
+.status-תוקן, .status-תוקן span {
+    background: #27ae60 !important;
+    color: #ffffff !important;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-weight: 600 !important;
+}
+
+/* Enhanced description section */
+.ticket-description-full {
+    background: linear-gradient(135deg, #f1f8ff, #e8f4fd) !important;
+    border: 2px solid #3498db !important;
+    padding: 20px !important;
+    border-radius: 10px;
+    margin: 20px 0;
+}
+
+.ticket-description-full h3 {
+    color: #2c3e50 !important;
+    font-weight: 700 !important;
+    font-size: 1.3rem;
+    border-bottom: 3px solid #3498db;
+    padding-bottom: 10px;
+    margin-bottom: 15px;
+}
+
+.ticket-description-full p {
+    color: #2c3e50 !important;
+    font-size: 1.1rem;
+    font-weight: 500 !important;
+    line-height: 1.6;
+}
+
+/* Form styling for edit modal */
+.form-group label {
+    color: #2c3e50 !important;
+    font-weight: 700 !important;
+    font-size: 1rem;
+    margin-bottom: 8px;
+}
+
+.form-control {
+    border: 2px solid #bdc3c7 !important;
+    padding: 12px 15px;
+    font-size: 1rem;
+    color: #2c3e50 !important;
+    background: #ffffff !important;
+    border-radius: 8px;
+    color: #2c3e50;
+}
+
+.form-control:focus {
+    border-color: #3498db !important;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.2) !important;
+}
